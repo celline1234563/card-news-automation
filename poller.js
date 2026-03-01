@@ -40,9 +40,14 @@ async function handlePlanRequests() {
         continue;
       }
 
+      const topic = notion.extractTopic(page.title);
+      if (!topic || topic.match(/^\(\d+\)$/) || topic.trim().length < 2) {
+        await log(`⏭ 빈 주제 스킵: ${page.title}`);
+        continue;
+      }
+
       await log(`📋 기획 착수: ${page.title}`);
       const { academy } = await loadConfig(page.academyKey);
-      const topic = notion.extractTopic(page.title);
 
       const comments = await notion.getComments(page.id);
       const pageContent = await notion.getPageContent(page.id);

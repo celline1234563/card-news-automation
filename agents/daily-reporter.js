@@ -137,6 +137,15 @@ function filterRegistered(pages) {
   return pages.filter(p => p.academyKey && notion.extractTopic(p.title).trim().length > 0);
 }
 
+// 빈 주제 페이지 찾기 (등록 학원이지만 주제 미입력)
+function findEmptyTopics(pages) {
+  return pages.filter(p => {
+    if (!p.academyKey) return false;
+    const topic = notion.extractTopic(p.title);
+    return !topic || topic.match(/^\(\d+\)$/) || topic.trim().length < 2;
+  });
+}
+
 export async function getPendingWork() {
   const [planning, design, review] = await Promise.all([
     notion.getByStatus('기획 착수'),
@@ -144,7 +153,10 @@ export async function getPendingWork() {
     notion.getByStatus('기획 컨펌'),
   ]);
 
-  const realPlanning = filterRegistered(planning);
+  const emptyTopics = findEmptyTopics(planning);
+  const realPlanning = filterRegistered(planning).filter(
+    p => !emptyTopics.find(e => e.id === p.id)
+  );
   const realDesign = filterRegistered(design);
   const realReview = filterRegistered(review);
 
@@ -163,6 +175,7 @@ export async function getPendingWork() {
       title: p.title,
       days: Math.floor((now - new Date(p.statusChangedAt).getTime()) / (1000 * 60 * 60 * 24)),
     })),
+    emptyTopics: emptyTopics.map(p => ({ id: p.id, title: p.title })),
   };
 }
 
@@ -257,6 +270,15 @@ export async function buildReportText() {
     if (pending.review.length > 0) {
       lines.push(`\uAC80\uD1A0 \uC9C0\uC5F0: ${pending.review.length}\uAC74 (3\uC77C+)`);
     }
+  }
+
+  if (pending.emptyTopics && pending.emptyTopics.length > 0) {
+    lines.push('');
+    lines.push('\u2501\u2501\u2501 \uC8FC\uC81C \uC785\uB825 \uD544\uC694 \u2501\u2501\u2501');
+    for (const page of pending.emptyTopics) {
+      lines.push(`\u2022 ${page.title}`);
+    }
+    lines.push('\u2192 \uB178\uC158\uC5D0\uC11C \uC8FC\uC81C\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694');
   }
 
   if (noComments.length === 0 && !hasPending) {
