@@ -1,0 +1,47 @@
+name: Config Change Preview
+
+on:
+  push:
+    branches: [feat/poller-schedule, main]
+    paths:
+      - 'config/brand/**'
+      - 'config/tokens/**'
+      - 'config/academies.json'
+      - 'prompts/**'
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout (full history for before/after)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium for Puppeteer
+        run: npx puppeteer browsers install chrome
+
+      - name: Write service account file
+        run: echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' > config/google-service-account.json
+
+      - name: Run preview bot
+        env:
+          GOOGLE_AI_API_KEY: ${{ secrets.GOOGLE_AI_API_KEY }}
+          GCHAT_WEBHOOK_URL: ${{ secrets.GCHAT_WEBHOOK_URL }}
+          GOOGLE_SERVICE_ACCOUNT_PATH: ./config/google-service-account.json
+        run: node scripts/preview-bot.js
+
+      - name: Cleanup service account
+        if: always()
+        run: rm -f config/google-service-account.json
