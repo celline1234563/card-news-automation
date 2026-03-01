@@ -4,4 +4,5 @@ output/
 temp/
 logs/
 config/google-service-account.json
+gen-lang-client-*.json
 .DS_Store
