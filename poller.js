@@ -194,16 +194,27 @@ async function checkDailyReport() {
   }
 }
 
+// ── 운영 시간 체크 (월~금 9~15시 KST) ──
+
+function isWorkingHours() {
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+  const day = now.getDay(); // 0=일, 6=토
+  const hour = now.getHours();
+  return day >= 1 && day <= 5 && hour >= 9 && hour < 15;
+}
+
 // ── 메인 루프 ──
 
 async function poll() {
-  if (isProcessing) {
-    await log('⏳ 이전 작업 중 — 스킵');
-    return;
-  }
+  if (isProcessing) return;
+
+  // 리포트는 운영 시간 관계없이 체크 (9시 되면 전송)
+  await checkDailyReport();
+
+  if (!isWorkingHours()) return;
+
   isProcessing = true;
   try {
-    await checkDailyReport();
     await handlePlanRequests();
     await handleDesignRequests();
     await handleDesignRevisions();
@@ -229,6 +240,8 @@ if (thisFile === mainFile) {
   console.log('═══════════════════════════════════════════');
   console.log(`  필터: 카드뉴스 + 최근 30일 + 등록 학원`);
   console.log(`  감지: 기획 착수 / 제작 요청 / 디자인 수정`);
+  console.log(`  운영: 월~금 09:00~15:00 KST`);
+  console.log(`  리포트: 매일 09:00 KST`);
   console.log(`  간격: ${INTERVAL / 1000}초`);
   console.log('');
 
