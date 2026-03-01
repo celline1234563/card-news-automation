@@ -369,17 +369,14 @@ export async function appendFilePaths(pageId, pngPaths, pageTitle, academyName, 
     },
   });
 
-  if (driveFiles.length > 0) {
-    for (const file of driveFiles) {
-      children.push({
-        object: 'block',
-        type: 'image',
-        image: {
-          type: 'external',
-          external: { url: file.driveUrl },
-        },
-      });
-    }
+  if (driveFiles.length > 0 && driveFolderIdResult) {
+    // Drive 폴더 링크만 공유 (이미지 embed 대신)
+    const folderUrl = `https://drive.google.com/drive/folders/${driveFolderIdResult}`;
+    children.push({
+      object: 'block',
+      type: 'bookmark',
+      bookmark: { url: folderUrl },
+    });
   } else {
     for (const filePath of pngPaths) {
       children.push({
