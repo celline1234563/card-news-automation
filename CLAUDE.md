@@ -257,10 +257,10 @@ POLLER_INTERVAL=30000
 - [x] Phase 1: 기본 파이프라인
 - [x] Phase 2: 컬러 시스템
 - [x] Phase 3: Gemini 이미지 생성
-- [ ] Phase 4: Gemini HTML 디자인 프롬프트 튜닝 (진행중)
-- [ ] Phase 5: 품질 에이전트
-- [ ] Phase 6: 노션 연동
-- [ ] Phase 7: 구글 드라이브 연동
+- [x] Phase 4: Gemini HTML 디자인 프롬프트 튜닝
+- [x] Phase 5: 품질 에이전트
+- [x] Phase 6: 노션 연동
+- [x] Phase 7: 구글 드라이브 연동
 - [ ] Phase 8: 통합 테스트
 
 _v3.0 | 2025-02-21_
