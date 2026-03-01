@@ -1,0 +1,106 @@
+{
+  "academy": "toktok",
+  "version": "1.0",
+
+  "color": {
+    "primary": "#FF6B2B",
+    "secondary": "#FFFFFF",
+    "background": "#FFF8F5",
+    "text": "#1A1A1A",
+    "highlight": "#FFD4B8",
+    "accent": "#E55A1B",
+
+    "surface": {
+      "card": "#FFFFFF",
+      "overlay_dark": "rgba(26, 26, 26, 0.7)",
+      "overlay_light": "rgba(255, 255, 255, 0.9)",
+      "overlay_primary": "rgba(255, 107, 43, 0.85)"
+    },
+
+    "text_variants": {
+      "heading": "#1A1A1A",
+      "body": "#333333",
+      "muted": "#6B7280",
+      "inverse": "#FFFFFF"
+    },
+
+    "semantic": {
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "danger": "#EF4444"
+    },
+
+    "chart": ["#FF6B2B", "#E55A1B", "#FFD4B8", "#1A1A1A", "#6B7280"]
+  },
+
+  "typography": {
+    "font_family": "'Noto Sans KR', sans-serif",
+    "font_url": "https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap",
+
+    "size": {
+      "display": 72,
+      "h1": 48,
+      "h2": 36,
+      "h3": 28,
+      "body": 24,
+      "body_small": 20,
+      "caption": 16,
+      "small": 14
+    },
+
+    "weight": {
+      "regular": 400,
+      "bold": 700,
+      "black": 900
+    },
+
+    "line_height": {
+      "tight": 1.2,
+      "normal": 1.4,
+      "relaxed": 1.6
+    }
+  },
+
+  "spacing": {
+    "canvas": {
+      "width": 1080,
+      "height": 1350,
+      "safe_area": 60
+    },
+
+    "scale": {
+      "xs": 4,
+      "sm": 8,
+      "md": 16,
+      "lg": 24,
+      "xl": 32,
+      "2xl": 48,
+      "3xl": 64,
+      "4xl": 96
+    }
+  },
+
+  "effects": {
+    "shadow": {
+      "subtle": "0 2px 8px rgba(26, 26, 26, 0.06)",
+      "medium": "0 4px 16px rgba(26, 26, 26, 0.1)",
+      "strong": "0 8px 32px rgba(26, 26, 26, 0.16)",
+      "glow": "0 0 24px rgba(255, 107, 43, 0.3)"
+    },
+
+    "radius": {
+      "none": 0,
+      "sm": 8,
+      "md": 16,
+      "lg": 24,
+      "full": "50%"
+    },
+
+    "overlay": {
+      "dark": "rgba(26, 26, 26, 0.7)",
+      "light": "rgba(255, 255, 255, 0.9)",
+      "primary": "rgba(255, 107, 43, 0.85)",
+      "subtle": "rgba(26, 26, 26, 0.35)"
+    }
+  }
+}
