@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "checks": {
+    "text_overflow": {
+      "severity": "fail",
+      "description": "텍스트가 1080x1350px 영역 밖으로 나가는가",
+      "auto_fix": true
+    },
+    "font_missing": {
+      "severity": "fail",
+      "description": "Noto Sans KR 폰트가 로드되는가",
+      "auto_fix": true
+    },
+    "hex_direct": {
+      "severity": "warn",
+      "description": "hex 색상이 직접 사용되었는가 (var() 대신)",
+      "auto_fix": false,
+      "allowed_hex": ["#FFFFFF", "#ffffff", "#111111", "#000000", "#fff"]
+    },
+    "token_font_size": {
+      "severity": "warn",
+      "description": "토큰에 정의된 폰트 사이즈 스케일을 벗어나는가",
+      "allowed_sizes": [14, 16, 20, 24, 28, 36, 48, 72],
+      "tolerance": 4,
+      "auto_fix": false
+    },
+    "token_spacing": {
+      "severity": "warn",
+      "description": "safe-area(60px) 미만의 패딩이 사용되는가",
+      "min_padding": 60,
+      "auto_fix": false
+    },
+    "pattern_compliance": {
+      "severity": "warn",
+      "description": "카드 타입에 맞는 레이아웃 패턴을 사용하는가",
+      "auto_fix": false
+    },
+    "series_header_footer": {
+      "severity": "warn",
+      "description": "시리즈 헤더/푸터가 일관적인가",
+      "auto_fix": true
+    }
+  },
+  "png_qa": {
+    "readability_threshold": 6,
+    "aesthetic_threshold": 6,
+    "text_cutoff_fail": true,
+    "image_broken_fail": true
+  }
+}

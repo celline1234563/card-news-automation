@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --color-primary: #2563EB;
+  --color-secondary: #10B981;
+  --color-background: #F0F4FF;
+  --color-text: #1A1A2E;
+  --color-highlight: #FEF08A;
+  --color-accent: #EF4444;
+  --color-white: #FFFFFF;
+  --color-black: #111111;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  width: 1080px; height: 1350px; overflow: visible;
+  font-family: 'Noto Sans KR', sans-serif;
+  word-break: keep-all; line-height: 1.45;
+  background: var(--color-primary); color: var(--color-white);
+  position: relative;
+}
+.card {
+  width: 1080px; height: 1350px;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  padding: 56px; position: relative;
+}
+/* 장식 원형 */
+.deco { position: absolute; border-radius: 50%; background: var(--color-white); }
+.d1 { width: 400px; height: 400px; opacity: 0.03; top: -80px; right: -80px; }
+.d2 { width: 250px; height: 250px; opacity: 0.05; bottom: 100px; left: -60px; }
+.d3 { width: 150px; height: 150px; opacity: 0.04; top: 300px; right: 100px; }
+
+.headline {
+  font-size: 40px; font-weight: 700;
+  text-align: center; opacity: 0.9;
+  margin-bottom: 48px; z-index: 1;
+}
+.stat {
+  font-size: 160px; font-weight: 900;
+  color: var(--color-accent);
+  text-align: center; line-height: 1;
+  margin-bottom: 20px; z-index: 1;
+}
+.stat-label {
+  font-size: 30px; text-align: center;
+  opacity: 0.8; margin-bottom: 48px; z-index: 1;
+}
+.subtext {
+  font-size: 24px; text-align: center;
+  opacity: 0.6; max-width: 800px; z-index: 1;
+}
+.card-num {
+  position: absolute; top: 24px; right: 50px;
+  font-size: 16px; font-weight: 700; opacity: 0.4;
+}
+em.highlight { background: var(--color-highlight); color: var(--color-black); font-style: normal; padding: 2px 8px; }
+em.color { color: var(--color-accent); font-weight: 900; font-style: normal; }
+em.underline { border-bottom: 6px solid var(--color-accent); font-style: normal; padding-bottom: 2px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="deco d1"></div>
+  <div class="deco d2"></div>
+  <div class="deco d3"></div>
+  <span class="card-num">{{card_number}}</span>
+  <h2 class="headline">{{headline}}</h2>
+  <div class="stat">{{stat}}</div>
+  <p class="stat-label">{{stat_label}}</p>
+  <p class="subtext">{{subtext}}</p>
+</div>
+</body>
+</html>

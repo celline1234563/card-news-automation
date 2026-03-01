@@ -1,0 +1,73 @@
+:root {
+  /* === 기존 변수 (하위호환 유지) === */
+  --color-primary: #2563EB;
+  --color-secondary: #10B981;
+  --color-background: #F0F4FF;
+  --color-text: #1A1A2E;
+  --color-highlight: #FEF08A;
+  --color-accent: #EF4444;
+  --color-white: #FFFFFF;
+  --color-black: #111111;
+  --canvas-width: 1080px;
+  --canvas-height: 1350px;
+  --font-main: 'Noto Sans KR', sans-serif;
+  --border-radius: 16px;
+  --padding-card: 80px;
+
+  /* === Phase 2: 확장 토큰 === */
+
+  /* Surface */
+  --surface-card: #FFFFFF;
+  --surface-overlay-dark: rgba(26, 26, 46, 0.7);
+  --surface-overlay-light: rgba(255, 255, 255, 0.85);
+  --surface-overlay-primary: rgba(32, 36, 135, 0.85);
+
+  /* Text variants */
+  --text-heading: #1A1A2E;
+  --text-body: #333344;
+  --text-muted: #6B7280;
+  --text-inverse: #FFFFFF;
+
+  /* Semantic */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+
+  /* Typography scale */
+  --font-size-display: 72px;
+  --font-size-h1: 48px;
+  --font-size-h2: 36px;
+  --font-size-h3: 28px;
+  --font-size-body: 24px;
+  --font-size-body-small: 20px;
+  --font-size-caption: 16px;
+  --font-size-small: 14px;
+  --font-weight-regular: 400;
+  --font-weight-bold: 700;
+  --font-weight-black: 900;
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.4;
+  --line-height-relaxed: 1.6;
+
+  /* Spacing scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+  --space-4xl: 96px;
+  --safe-area: 60px;
+
+  /* Effects */
+  --shadow-subtle: 0 2px 8px rgba(26, 26, 46, 0.08);
+  --shadow-medium: 0 4px 16px rgba(26, 26, 46, 0.12);
+  --shadow-strong: 0 8px 32px rgba(26, 26, 46, 0.2);
+  --shadow-glow: 0 0 24px rgba(32, 36, 135, 0.3);
+  --radius-none: 0;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-full: 50%;
+}

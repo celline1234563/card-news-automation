@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Design Token Schema",
+  "description": "카드뉴스 디자인 토큰 JSON 검증 스키마",
+  "type": "object",
+  "required": ["academy", "version", "color", "typography", "spacing", "effects"],
+  "properties": {
+    "academy": { "type": "string" },
+    "version": { "type": "string" },
+    "color": {
+      "type": "object",
+      "required": ["primary", "secondary", "background", "text", "highlight", "accent", "surface", "text_variants"],
+      "properties": {
+        "primary": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "secondary": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "background": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "text": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "highlight": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "accent": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "surface": {
+          "type": "object",
+          "required": ["card", "overlay_dark", "overlay_light", "overlay_primary"],
+          "properties": {
+            "card": { "type": "string" },
+            "overlay_dark": { "type": "string" },
+            "overlay_light": { "type": "string" },
+            "overlay_primary": { "type": "string" }
+          }
+        },
+        "text_variants": {
+          "type": "object",
+          "required": ["heading", "body", "muted", "inverse"],
+          "properties": {
+            "heading": { "type": "string" },
+            "body": { "type": "string" },
+            "muted": { "type": "string" },
+            "inverse": { "type": "string" }
+          }
+        },
+        "semantic": {
+          "type": "object",
+          "properties": {
+            "success": { "type": "string" },
+            "warning": { "type": "string" },
+            "danger": { "type": "string" }
+          }
+        },
+        "chart": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 3
+        }
+      }
+    },
+    "typography": {
+      "type": "object",
+      "required": ["font_family", "font_url", "size", "weight", "line_height"],
+      "properties": {
+        "font_family": { "type": "string" },
+        "font_url": { "type": "string", "format": "uri" },
+        "size": {
+          "type": "object",
+          "required": ["display", "h1", "h2", "h3", "body", "caption", "small"],
+          "additionalProperties": { "type": "number", "minimum": 10, "maximum": 120 }
+        },
+        "weight": {
+          "type": "object",
+          "required": ["regular", "bold", "black"],
+          "additionalProperties": { "type": "number" }
+        },
+        "line_height": {
+          "type": "object",
+          "required": ["tight", "normal", "relaxed"],
+          "additionalProperties": { "type": "number", "minimum": 1, "maximum": 3 }
+        }
+      }
+    },
+    "spacing": {
+      "type": "object",
+      "required": ["canvas", "scale"],
+      "properties": {
+        "canvas": {
+          "type": "object",
+          "required": ["width", "height", "safe_area"],
+          "properties": {
+            "width": { "type": "number", "const": 1080 },
+            "height": { "type": "number", "const": 1350 },
+            "safe_area": { "type": "number" }
+          }
+        },
+        "scale": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        }
+      }
+    },
+    "effects": {
+      "type": "object",
+      "required": ["shadow", "radius", "overlay"],
+      "properties": {
+        "shadow": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "radius": {
+          "type": "object",
+          "additionalProperties": { "type": ["number", "string"] }
+        },
+        "overlay": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    }
+  }
+}

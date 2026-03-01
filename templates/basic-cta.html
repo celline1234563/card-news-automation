@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --color-primary: #2563EB;
+  --color-secondary: #10B981;
+  --color-background: #F0F4FF;
+  --color-text: #1A1A2E;
+  --color-highlight: #FEF08A;
+  --color-accent: #EF4444;
+  --color-white: #FFFFFF;
+  --color-black: #111111;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  width: 1080px; height: 1350px; overflow: visible;
+  font-family: 'Noto Sans KR', sans-serif;
+  word-break: keep-all; line-height: 1.45;
+  background: var(--color-primary); color: var(--color-white);
+}
+.card {
+  width: 1080px; height: 1350px; padding: 56px;
+  position: relative;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  text-align: center;
+}
+.card-num {
+  position: absolute; top: 24px; right: 50px;
+  font-size: 16px; font-weight: 700; opacity: 0.4;
+}
+.headline {
+  font-size: 48px; font-weight: 900;
+  line-height: 1.4; margin-bottom: 32px;
+  max-width: 900px;
+}
+.subtext-main {
+  font-size: 26px; opacity: 0.8;
+  margin-bottom: 56px; max-width: 800px;
+  line-height: 1.6;
+}
+.cta-btn {
+  display: inline-flex; align-items: center; gap: 14px;
+  background: var(--color-secondary); color: var(--color-text);
+  font-size: 34px; font-weight: 900;
+  padding: 28px 64px; border-radius: 50px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+  margin-bottom: 32px;
+}
+.cta-emoji { font-size: 36px; }
+.cta-sub {
+  font-size: 20px; opacity: 0.6;
+  margin-bottom: 56px;
+}
+.academy {
+  font-size: 22px; font-weight: 700;
+  opacity: 0.7; letter-spacing: 2px;
+}
+/* 장식 */
+.deco { position: absolute; border-radius: 50%; background: var(--color-white); }
+.d1 { width: 300px; height: 300px; opacity: 0.04; top: -60px; left: -60px; }
+.d2 { width: 200px; height: 200px; opacity: 0.03; bottom: 80px; right: -40px; }
+em.highlight { background: var(--color-highlight); color: var(--color-black); font-style: normal; padding: 2px 8px; }
+em.color { color: var(--color-accent); font-weight: 900; font-style: normal; }
+em.underline { border-bottom: 6px solid var(--color-accent); font-style: normal; padding-bottom: 2px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="deco d1"></div>
+  <div class="deco d2"></div>
+  <span class="card-num">{{card_number}}</span>
+  <h1 class="headline">{{headline}}</h1>
+  <p class="subtext-main">{{subtext}}</p>
+  <div class="cta-btn">
+    <span>{{cta_text}}</span>
+    <span class="cta-emoji">👆</span>
+  </div>
+  <p class="cta-sub">{{cta_sub}}</p>
+  <div class="academy">{{academy_name}}</div>
+</div>
+</body>
+</html>

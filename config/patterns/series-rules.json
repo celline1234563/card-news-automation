@@ -1,0 +1,61 @@
+{
+  "version": "1.0",
+  "description": "3-레이어 시리즈 일관성 규칙",
+
+  "structure": {
+    "header": {
+      "required": true,
+      "position": "top",
+      "height_range": [60, 120],
+      "elements": ["학원명_or_시리즈제목"],
+      "consistency": "모든 카드에서 동일 위치·스타일"
+    },
+    "footer": {
+      "required": false,
+      "position": "bottom",
+      "height_range": [40, 80],
+      "elements": ["카드_번호", "브랜드_워터마크"],
+      "consistency": "모든 카드에서 동일 위치·스타일"
+    }
+  },
+
+  "color": {
+    "primary_dominant_cards": [1, 4, 10],
+    "primary_dominant_description": "카드 1(hook), 4(data), 10(cta)에서 primary 색상 비중 높게",
+    "neutral_cards": [2, 3, 5, 6, 7, 8, 9],
+    "neutral_description": "나머지 카드는 background/white 위주, primary 포인트만",
+    "rules": [
+      "모든 카드에서 동일한 :root CSS 변수 사용",
+      "카드 간 컬러 팔레트 변경 절대 금지",
+      "secondary + accent 동시 사용 금지"
+    ]
+  },
+
+  "rhythm": {
+    "text_density_pattern": {
+      "high": [1, 4, 10],
+      "medium": [2, 3, 5, 8],
+      "low": [6, 7, 9]
+    },
+    "text_density_description": "high=큰 텍스트 소수, medium=보통, low=리스트/항목 다수",
+    "image_placement": [1, 4, 8],
+    "image_placement_description": "배경 이미지가 들어가기 적합한 카드 번호",
+    "consecutive_grid_ban": true,
+    "consecutive_grid_ban_description": "연속 2장에 동일 그리드 사용 금지",
+    "max_same_grid": 3,
+    "max_same_grid_description": "10장 중 같은 그리드 최대 3회"
+  },
+
+  "consistency_scoring": {
+    "total": 10,
+    "criteria": [
+      { "name": "color_consistency", "weight": 3, "description": "10장 모두 같은 컬러 팔레트" },
+      { "name": "header_footer", "weight": 2, "description": "헤더/푸터 위치·스타일 통일" },
+      { "name": "typography", "weight": 2, "description": "폰트 사이즈·웨이트 체계 통일" },
+      { "name": "spacing", "weight": 1, "description": "패딩·마진 체계 통일" },
+      { "name": "layout_rhythm", "weight": 1, "description": "레이아웃 변화 리듬" },
+      { "name": "visual_flow", "weight": 1, "description": "시각적 흐름 자연스러움" }
+    ],
+    "pass_score": 7
+  }
+}

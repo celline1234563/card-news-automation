@@ -1,0 +1,15 @@
+{
+  "name": "카드뉴스 Import",
+  "id": "cardnews-importer",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "capabilities": [],
+  "enableProposedApi": false,
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "reasoning": "카드뉴스 로컬 서버 접근용",
+    "devAllowedDomains": ["http://localhost:3456"]
+  }
+}

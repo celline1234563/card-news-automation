@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 16px;
+    background: #1e1e1e;
+    color: #e0e0e0;
+    font-size: 13px;
+  }
+  h2 { font-size: 16px; margin-bottom: 12px; color: #fff; }
+  .server-input { display: flex; gap: 8px; margin-bottom: 16px; }
+  input {
+    flex: 1; padding: 8px 12px; border-radius: 6px;
+    border: 1px solid #444; background: #2a2a2a; color: #fff; font-size: 13px;
+  }
+  button {
+    padding: 8px 16px; border-radius: 6px; border: none;
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s;
+  }
+  .btn-primary { background: #0d99ff; color: #fff; }
+  .btn-primary:hover { background: #0b87e0; }
+  .btn-import {
+    width: 100%; padding: 12px; margin-top: 12px;
+    background: #18a957; color: #fff; font-size: 14px;
+  }
+  .btn-import:hover { background: #15964d; }
+  .btn-import:disabled { background: #555; cursor: not-allowed; }
+  .batch-list { margin: 12px 0; max-height: 200px; overflow-y: auto; }
+  .batch-item {
+    padding: 10px 12px; background: #2a2a2a; border-radius: 8px;
+    margin-bottom: 6px; cursor: pointer; border: 2px solid transparent;
+  }
+  .batch-item:hover { border-color: #0d99ff; }
+  .batch-item.selected { border-color: #18a957; background: #1a3a2a; }
+  .batch-name { font-weight: 600; color: #fff; }
+  .batch-date { color: #888; font-size: 11px; margin-top: 2px; }
+  .card-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin: 12px 0;
+  }
+  .card-chip {
+    padding: 6px 4px; background: #333; border-radius: 4px;
+    text-align: center; font-size: 10px; color: #ccc;
+  }
+  .card-chip .num { font-weight: 700; font-size: 12px; color: #fff; }
+  .card-chip .type { color: #888; }
+  .status { padding: 10px; background: #2a2a2a; border-radius: 6px; text-align: center; }
+  .status.loading { color: #0d99ff; }
+  .status.success { color: #18a957; }
+  .status.error { color: #ff4444; }
+  .info { color: #888; font-size: 11px; margin-top: 8px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<h2>📥 카드뉴스 Import</h2>
+
+<div class="server-input">
+  <input id="serverUrl" value="http://localhost:3456" />
+  <button class="btn-primary" onclick="loadBatches()">연결</button>
+</div>
+
+<div id="content">
+  <div class="status">서버에 연결하세요 (node server.js)</div>
+</div>
+
+<script>
+let selectedSpec = null;
+
+async function loadBatches() {
+  const url = document.getElementById('serverUrl').value.replace(/\/$/, '');
+  const el = document.getElementById('content');
+  el.innerHTML = '<div class="status loading">연결 중...</div>';
+  try {
+    const resp = await fetch(url + '/api/batches');
+    const batches = await resp.json();
+    if (batches.length === 0) {
+      el.innerHTML = '<div class="status">생성된 카드뉴스가 없습니다</div>';
+      return;
+    }
+    let html = '<div class="batch-list">';
+    for (const b of batches) {
+      const date = new Date(b.createdAt).toLocaleDateString('ko-KR');
+      html += '<div class="batch-item" data-id="' + b.id + '" onclick="selectBatch(this,\'' + b.id + '\',\'' + url + '\')">'
+        + '<div class="batch-name">' + b.name + '</div>'
+        + '<div class="batch-date">' + date + '</div></div>';
+    }
+    html += '</div><div id="detail"></div>';
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = '<div class="status error">연결 실패: ' + e.message + '<br><br>node server.js 실행 필요</div>';
+  }
+}
+
+async function selectBatch(el, batchId, serverUrl) {
+  document.querySelectorAll('.batch-item').forEach(function(e) { e.classList.remove('selected'); });
+  el.classList.add('selected');
+  const detail = document.getElementById('detail');
+  detail.innerHTML = '<div class="status loading">카드 데이터 로딩...</div>';
+  try {
+    const resp = await fetch(serverUrl + '/api/batches/' + encodeURIComponent(batchId) + '/figma-spec');
+    const spec = await resp.json();
+    selectedSpec = spec;
+    let html = '<div style="margin:12px 0;color:#aaa;font-size:12px">'
+      + spec.academyName + ' · 카드 ' + spec.cardCount + '장</div>';
+    html += '<div class="card-grid">';
+    for (const c of spec.cards) {
+      html += '<div class="card-chip"><div class="num">' + String(c.number).padStart(2,'0')
+        + '</div><div class="type">' + c.type + '</div></div>';
+    }
+    html += '</div>';
+    html += '<button class="btn-import" onclick="doImport()">🚀 '
+      + spec.cardCount + '장 HTML→레이어 Import</button>';
+    html += '<div class="info">HTML/CSS 파싱 → 배경색·도형·그림자 포함 Figma 레이어</div>';
+    detail.innerHTML = html;
+  } catch (e) {
+    detail.innerHTML = '<div class="status error">로딩 실패: ' + e.message + '</div>';
+  }
+}
+
+/* ══════════════════════════════════════
+   HTML → Visual Node 파싱 (hidden iframe)
+   ══════════════════════════════════════ */
+
+function cssColorToRgba(str) {
+  if (!str || str === 'transparent' || str === 'rgba(0, 0, 0, 0)') return null;
+  var m = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+  if (m) return { r: +m[1], g: +m[2], b: +m[3], a: m[4] !== undefined ? +m[4] : 1 };
+  return null;
+}
+
+function parseBorderRadius(str, w, h) {
+  if (!str || str === '0px') return { values: [0,0,0,0], isCircle: false };
+  var parts = str.split(' ').map(function(s) { return parseFloat(s) || 0; });
+  var tl = parts[0] || 0, tr = parts[1] || tl, br = parts[2] || tl, bl = parts[3] || tr;
+  var half = Math.min(w, h) / 2;
+  var isCircle = (tl >= half && tr >= half && br >= half && bl >= half && w > 0 && h > 0);
+  return { values: [tl, tr, br, bl], isCircle: isCircle };
+}
+
+function parseBorder(style) {
+  var w = parseFloat(style.borderTopWidth) || 0;
+  if (w < 0.5) return null;
+  var c = cssColorToRgba(style.borderTopColor);
+  if (!c) return null;
+  return { width: w, color: c };
+}
+
+function parseBoxShadow(str) {
+  if (!str || str === 'none') return null;
+  var m = str.match(/(rgba?\([^)]+\))\s+([-\d.]+)px\s+([-\d.]+)px\s+([-\d.]+)px(?:\s+([-\d.]+)px)?/);
+  if (!m) return null;
+  return {
+    color: cssColorToRgba(m[1]),
+    x: parseFloat(m[2]) || 0,
+    y: parseFloat(m[3]) || 0,
+    blur: parseFloat(m[4]) || 0,
+    spread: parseFloat(m[5]) || 0
+  };
+}
+
+function extractTextWithRanges(el) {
+  var plain = '';
+  var ranges = [];
+  var children = el.childNodes;
+  for (var i = 0; i < children.length; i++) {
+    var ch = children[i];
+    if (ch.nodeType === 3) {
+      plain += ch.textContent;
+    } else if (ch.nodeType === 1) {
+      var tag = ch.tagName.toLowerCase();
+      var text = ch.textContent || '';
+      if (text.length === 0) continue;
+      var start = plain.length;
+      plain += text;
+      if (tag === 'em' || tag === 'strong' || tag === 'b' || tag === 'span') {
+        var cs = ch.ownerDocument.defaultView.getComputedStyle(ch);
+        ranges.push({
+          start: start,
+          end: start + text.length,
+          fontWeight: cs.fontWeight,
+          color: cssColorToRgba(cs.color),
+          bgColor: cssColorToRgba(cs.backgroundColor),
+          underline: cs.borderBottomWidth && parseFloat(cs.borderBottomWidth) > 2
+        });
+      }
+    }
+  }
+  return { plain: plain, ranges: ranges };
+}
+
+function hasDirectText(el) {
+  for (var i = 0; i < el.childNodes.length; i++) {
+    if (el.childNodes[i].nodeType === 3 && el.childNodes[i].textContent.trim()) return true;
+    if (el.childNodes[i].nodeType === 1) {
+      var tag = el.childNodes[i].tagName.toLowerCase();
+      if (tag === 'em' || tag === 'strong' || tag === 'b' || tag === 'span') return true;
+    }
+  }
+  return false;
+}
+
+function walkDOM(doc, el, nodes) {
+  var children = el.children;
+  for (var i = 0; i < children.length; i++) {
+    var child = children[i];
+    var style = doc.defaultView.getComputedStyle(child);
+    if (style.display === 'none') continue;
+
+    var rect = child.getBoundingClientRect();
+    var w = Math.round(rect.width);
+    var h = Math.round(rect.height);
+    if (w < 1 && h < 1) continue;
+
+    var x = Math.round(rect.left);
+    var y = Math.round(rect.top);
+    var bgColor = cssColorToRgba(style.backgroundColor);
+    var color = cssColorToRgba(style.color);
+    var opacity = parseFloat(style.opacity);
+    if (isNaN(opacity)) opacity = 1;
+    var br = parseBorderRadius(style.borderRadius, w, h);
+    var border = parseBorder(style);
+    var shadow = parseBoxShadow(style.boxShadow);
+    var isText = hasDirectText(child);
+    var hasBg = bgColor && bgColor.a > 0;
+
+    // Shape node (no text, has bg or is decorative)
+    if (!isText && (hasBg || border || shadow)) {
+      nodes.push({
+        type: 'shape',
+        name: (child.className || child.tagName.toLowerCase()).toString().split(' ')[0],
+        x: x, y: y, w: w, h: h,
+        fill: bgColor,
+        opacity: opacity,
+        cornerRadius: br.values,
+        isCircle: br.isCircle,
+        stroke: border,
+        shadow: shadow
+      });
+    }
+
+    // Text node
+    if (isText) {
+      var textInfo = extractTextWithRanges(child);
+      if (textInfo.plain.trim()) {
+        var node = {
+          type: 'text',
+          name: (child.className || child.tagName.toLowerCase()).toString().split(' ')[0],
+          x: x, y: y, w: w, h: h,
+          text: textInfo.plain,
+          ranges: textInfo.ranges,
+          fontSize: parseFloat(style.fontSize) || 16,
+          fontWeight: style.fontWeight || '400',
+          color: color,
+          opacity: opacity,
+          textAlign: style.textAlign || 'left',
+          lineHeight: style.lineHeight === 'normal' ? 1.45 : (parseFloat(style.lineHeight) / (parseFloat(style.fontSize) || 16))
+        };
+        // Text node may also have background (like CTA button)
+        if (hasBg) {
+          node.bgFill = bgColor;
+          node.cornerRadius = br.values;
+          node.shadow = shadow;
+        }
+        nodes.push(node);
+      }
+    }
+
+    // Recurse into children that aren't inline text wrappers
+    if (child.children.length > 0 && !isText) {
+      walkDOM(doc, child, nodes);
+    }
+    // For text parents with child elements (like CTA with emoji spans), also recurse
+    if (isText && child.children.length > 0) {
+      // Check for non-inline children
+      for (var j = 0; j < child.children.length; j++) {
+        var sub = child.children[j];
+        var subStyle = doc.defaultView.getComputedStyle(sub);
+        if (subStyle.display === 'block' || subStyle.display === 'flex') {
+          walkDOM(doc, child, nodes);
+          break;
+        }
+      }
+    }
+  }
+}
+
+function parseCardHtml(htmlString) {
+  return new Promise(function(resolve) {
+    var iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1080px;height:1350px;border:none;visibility:hidden;';
+    document.body.appendChild(iframe);
+
+    var doc = iframe.contentDocument;
+    doc.open();
+    doc.write(htmlString);
+    doc.close();
+
+    setTimeout(function() {
+      try {
+        var bodyStyle = doc.defaultView.getComputedStyle(doc.body);
+        var bodyFill = cssColorToRgba(bodyStyle.backgroundColor);
+        var nodes = [];
+        // Start walking from body's first child (usually .card div) or body itself
+        var root = doc.body;
+        walkDOM(doc, root, nodes);
+
+        resolve({
+          bodyFill: bodyFill,
+          nodes: nodes
+        });
+      } catch(e) {
+        resolve(null);
+      } finally {
+        document.body.removeChild(iframe);
+      }
+    }, 250);
+  });
+}
+
+/* ══════════════════════════════════════
+   Import 실행
+   ══════════════════════════════════════ */
+
+async function doImport() {
+  if (!selectedSpec) return;
+  var btn = document.querySelector('.btn-import');
+  btn.disabled = true;
+  btn.textContent = '⏳ HTML 파싱 중...';
+
+  var parsedCards = [];
+  for (var i = 0; i < selectedSpec.cards.length; i++) {
+    var card = selectedSpec.cards[i];
+    btn.textContent = '⏳ 카드 ' + (i+1) + '/' + selectedSpec.cards.length + ' HTML 파싱...';
+
+    var parsed = null;
+    if (card.generated_html) {
+      parsed = await parseCardHtml(card.generated_html);
+    }
+    parsedCards.push(parsed);
+  }
+
+  btn.textContent = '⏳ Figma 레이어 생성 중...';
+
+  parent.postMessage({
+    pluginMessage: {
+      type: 'import-cards',
+      spec: selectedSpec,
+      parsedCards: parsedCards
+    }
+  }, '*');
+}
+
+/* ══════════════════════════════════════
+   메시지 수신
+   ══════════════════════════════════════ */
+
+window.onmessage = function(event) {
+  var msg = event.data.pluginMessage;
+  if (!msg) return;
+  var btn = document.querySelector('.btn-import');
+
+  if (msg.type === 'progress') {
+    if (btn) btn.textContent = '⏳ ' + msg.current + ' / ' + msg.total + ' 레이어 생성...';
+  }
+  if (msg.type === 'import-done') {
+    if (btn) {
+      btn.textContent = '✅ ' + msg.count + '장 Import 완료!';
+      btn.style.background = '#18a957';
+      btn.disabled = false;
+    }
+  }
+  if (msg.type === 'status') {
+    if (btn) btn.textContent = '⏳ ' + msg.text;
+  }
+  if (msg.type === 'error') {
+    if (btn) {
+      btn.textContent = '❌ ' + msg.message;
+      btn.style.background = '#cc3333';
+      btn.disabled = false;
+    }
+  }
+};
+</script>
+
+</body>
+</html>

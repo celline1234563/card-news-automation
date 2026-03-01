@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --version:*)",
+      "Bash(npm:*)",
+      "Bash(npx puppeteer:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(node index.js:*)",
+      "Bash(node:*)",
+      "WebFetch(domain:developers.figma.com)",
+      "WebFetch(domain:docs-code.to.design)",
+      "WebFetch(domain:html.to.design)",
+      "WebFetch(domain:www.figma.com)",
+      "WebFetch(domain:divriots.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:dev.to)",
+      "Bash(npx vitest run --config vitest.config.js 2>&1)",
+      "Bash(npx vitest run --config vitest.e2e.config.js 2>&1)",
+      "Bash(npx vitest run tests/unit/daily-reporter.test.js 2>&1)",
+      "Bash(code /Users/celline/Desktop/cardnews/.env)",
+      "Bash(git init)"
+    ]
+  }
+}

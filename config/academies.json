@@ -1,0 +1,63 @@
+{
+  "ollinone": {
+    "name": "올인원 수학학원",
+    "notion_prefix": "올인원",
+    "theme": {
+      "primary": "#202487",
+      "secondary": "#fff3c8",
+      "background": "#F8F8FF",
+      "text": "#1A1A2E",
+      "highlight": "#fff3c8",
+      "accent": "#202487"
+    },
+    "mood": ["스마트한", "심플한", "진중한"],
+    "grade": ["중학생", "고등학생"],
+    "region": "분당 수내",
+    "subject": "수학",
+    "target_middle": ["백현중","정자중","내정중","수내중","샛별중","양영중","서현중","판교중"],
+    "target_high": ["수내고","서현고","분당중앙고","늘푸른고","한솔고","분당고","영덕여고","대진고","운중고","야탑고"],
+    "font": "Noto Sans KR",
+    "logo_url": "",
+    "drive_folder_id": "1lzvB4ZoZGv40fy5xachV8kiEJNvdFpzn"
+  },
+  "jinhak": {
+    "name": "진학학원",
+    "notion_prefix": "진학",
+    "theme": {
+      "primary": "#081459",
+      "secondary": "#ff871e",
+      "background": "#F5F6FA",
+      "text": "#1A1A2E",
+      "highlight": "#FFE0C0",
+      "accent": "#ff871e"
+    },
+    "mood": ["맞춤", "대담한", "유능한"],
+    "grade": ["초등", "중등", "고등"],
+    "region": "관악구, 금천구",
+    "subject": "수학",
+    "target_elementary": ["시흥초","백산초","금나래초","금천초","동광초","탑동초","문백초","안천초"],
+    "target_middle": ["시흥중","문일중","동일중","한울중","가산중","난우중"],
+    "font": "Noto Sans KR",
+    "logo_url": "",
+    "drive_folder_id": "1lzvB4ZoZGv40fy5xachV8kiEJNvdFpzn"
+  },
+  "toktok": {
+    "name": "톡톡학원",
+    "notion_prefix": "톡톡",
+    "theme": {
+      "primary": "#FF6B2B",
+      "secondary": "#FFFFFF",
+      "background": "#FFF8F5",
+      "text": "#1A1A1A",
+      "highlight": "#FFD4B8",
+      "accent": "#E55A1B"
+    },
+    "mood": ["깔끔한", "스마트한", "똑부러지는"],
+    "grade": ["초등"],
+    "subject": "영어",
+    "speciality": ["국제학교", "특목고", "화상영어", "미국교과서"],
+    "font": "Noto Sans KR",
+    "logo_url": "",
+    "drive_folder_id": "1lzvB4ZoZGv40fy5xachV8kiEJNvdFpzn"
+  }
+}

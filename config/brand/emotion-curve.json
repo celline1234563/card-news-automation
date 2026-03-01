@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "description": "카드뉴스 10장 감정곡선 — 각 카드의 감정 목표와 강도를 정의",
+  "curve": [
+    { "card": 1, "type": "hook", "emotion": "충격", "intensity": 9, "description": "스크롤 멈추게 하는 임팩트" },
+    { "card": 2, "type": "problem", "emotion": "공감", "intensity": 7, "description": "내 이야기처럼 느끼게" },
+    { "card": 3, "type": "problem", "emotion": "불안", "intensity": 8, "description": "문제의 심각성 인식" },
+    { "card": 4, "type": "data", "emotion": "놀라움", "intensity": 7, "description": "데이터로 충격 재확인" },
+    { "card": 5, "type": "insight", "emotion": "납득", "intensity": 6, "description": "원인을 이해하며 고개 끄덕" },
+    { "card": 6, "type": "solution", "emotion": "희망", "intensity": 7, "description": "해결 방법이 있구나" },
+    { "card": 7, "type": "solution", "emotion": "확신", "intensity": 7, "description": "구체적으로 되는구나" },
+    { "card": 8, "type": "example", "emotion": "신뢰", "intensity": 8, "description": "실제 사례로 증명" },
+    { "card": 9, "type": "summary", "emotion": "정리", "intensity": 5, "description": "핵심을 명확히 기억" },
+    { "card": 10, "type": "cta", "emotion": "행동촉구", "intensity": 8, "description": "지금 행동해야 할 이유" }
+  ],
+  "type_emotion_map": {
+    "hook": ["충격", "호기심", "긴장"],
+    "problem": ["공감", "불안", "걱정"],
+    "data": ["놀라움", "긴장", "충격"],
+    "insight": ["납득", "이해", "깨달음"],
+    "solution": ["희망", "확신", "안도"],
+    "example": ["신뢰", "동기부여", "감동"],
+    "summary": ["정리", "확인", "납득"],
+    "cta": ["행동촉구", "기대", "결심"]
+  },
+  "intensity_guide": {
+    "1-3": "잔잔함 — 정보 전달, 부드러운 톤",
+    "4-6": "중간 — 설득, 논리적 전개",
+    "7-8": "강함 — 공감, 충격, 행동 유도",
+    "9-10": "최대 — 스크롤 스톱, 즉각 반응"
+  }
+}

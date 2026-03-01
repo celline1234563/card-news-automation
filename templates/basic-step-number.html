@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --color-primary: #2563EB;
+  --color-secondary: #10B981;
+  --color-background: #F0F4FF;
+  --color-text: #1A1A2E;
+  --color-highlight: #FEF08A;
+  --color-accent: #EF4444;
+  --color-white: #FFFFFF;
+  --color-black: #111111;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  width: 1080px; height: 1350px; overflow: visible;
+  font-family: 'Noto Sans KR', sans-serif;
+  word-break: keep-all; line-height: 1.45;
+  background: var(--color-white); color: var(--color-text);
+}
+.card {
+  width: 1080px; height: 1350px; padding: 50px 56px; position: relative;
+  display: flex; flex-direction: column;
+}
+.card-num {
+  position: absolute; top: 24px; right: 50px;
+  font-size: 16px; font-weight: 700; color: var(--color-primary); opacity: 0.5;
+}
+.headline {
+  font-size: 46px; font-weight: 900;
+  color: var(--color-primary); margin-bottom: 30px;
+}
+.steps {
+  display: flex; flex-direction: column;
+  flex: 1; justify-content: space-evenly;
+}
+.step {
+  display: flex; align-items: flex-start;
+  padding: 0; position: relative;
+}
+.step-line {
+  position: absolute; left: 34px; top: 70px; bottom: -10px;
+  width: 3px; background: var(--color-primary); opacity: 0.2;
+}
+.step:last-child .step-line { display: none; }
+.step-num {
+  width: 68px; height: 68px; min-width: 68px;
+  background: var(--color-primary); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--color-white); font-size: 28px; font-weight: 900;
+  margin-right: 32px; z-index: 1;
+}
+.step-content { flex: 1; padding-top: 8px; }
+.step-title { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+.step-desc { font-size: 24px; color: var(--color-text); opacity: 0.6; }
+.subtext {
+  margin-top: auto; padding-top: 20px; font-size: 22px;
+  color: var(--color-text); opacity: 0.5;
+}
+em.highlight { background: var(--color-highlight); font-style: normal; padding: 2px 8px; }
+em.color { color: var(--color-primary); font-weight: 900; font-style: normal; }
+em.underline { border-bottom: 6px solid var(--color-accent); font-style: normal; padding-bottom: 2px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <span class="card-num">{{card_number}}</span>
+  <h1 class="headline">{{headline}}</h1>
+  <div class="steps">
+    <div class="step">
+      <div class="step-line"></div>
+      <span class="step-num">1</span>
+      <div class="step-content"><div class="step-title">{{step_title_1}}</div><div class="step-desc">{{step_desc_1}}</div></div>
+    </div>
+    <div class="step">
+      <div class="step-line"></div>
+      <span class="step-num">2</span>
+      <div class="step-content"><div class="step-title">{{step_title_2}}</div><div class="step-desc">{{step_desc_2}}</div></div>
+    </div>
+    <div class="step">
+      <div class="step-line"></div>
+      <span class="step-num">3</span>
+      <div class="step-content"><div class="step-title">{{step_title_3}}</div><div class="step-desc">{{step_desc_3}}</div></div>
+    </div>
+    <div class="step">
+      <span class="step-num">4</span>
+      <div class="step-content"><div class="step-title">{{step_title_4}}</div><div class="step-desc">{{step_desc_4}}</div></div>
+    </div>
+  </div>
+  <p class="subtext">{{subtext}}</p>
+</div>
+</body>
+</html>

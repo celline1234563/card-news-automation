@@ -1,0 +1,9 @@
+{
+  "quotas": [
+    { "academyKey": "ollinone", "grade": "중등", "monthly": 6 },
+    { "academyKey": "ollinone", "grade": "고등", "monthly": 6 },
+    { "academyKey": "jinhak", "grade": "중등", "monthly": 6 },
+    { "academyKey": "jinhak", "grade": "고등", "monthly": 6 },
+    { "academyKey": "toktok", "grade": "전체", "monthly": 4 }
+  ]
+}

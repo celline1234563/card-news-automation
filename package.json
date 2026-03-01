@@ -1,0 +1,29 @@
+{
+  "name": "card-news-automation",
+  "version": "1.0.0",
+  "description": "한국 학원 인스타그램 카드뉴스 자동 생성 시스템",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "poller": "node poller.js",
+    "test": "vitest run",
+    "test:unit": "vitest run --config vitest.config.js",
+    "test:e2e": "vitest run --config vitest.e2e.config.js",
+    "test:watch": "vitest --config vitest.config.js",
+    "demo": "node index.js \"초등 영어 학원 선택 기준\" --academy jinhak"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@google/genai": "^1.42.0",
+    "@notionhq/client": "^5.9.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "googleapis": "^171.4.0",
+    "puppeteer": "^24.2.1"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.18"
+  }
+}

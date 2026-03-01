@@ -1,0 +1,30 @@
+{
+  "description": "학원별 Google Drive 이미지 폴더 ID (초기 placeholder — setup-drive-folders.js로 생성)",
+  "ollinone": {
+    "root": "",
+    "categories": {
+      "수업사진": "",
+      "학생사진": "",
+      "학원외관": "",
+      "상담사진": ""
+    }
+  },
+  "jinhak": {
+    "root": "",
+    "categories": {
+      "수업사진": "",
+      "학생사진": "",
+      "학원외관": "",
+      "상담사진": ""
+    }
+  },
+  "toktok": {
+    "root": "",
+    "categories": {
+      "수업사진": "",
+      "학생사진": "",
+      "학원외관": "",
+      "상담사진": ""
+    }
+  }
+}

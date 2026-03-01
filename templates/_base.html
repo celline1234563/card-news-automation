@@ -1,0 +1,46 @@
+<!--
+  카드뉴스 HTML 템플릿 — 공통 기본 구조 명세
+  각 템플릿(T01~T10)은 이 명세를 따라야 합니다.
+
+  ─── 필수 포함 항목 ───
+
+  1. Google Fonts 로드:
+     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+
+  2. CSS 변수 인라인 포함:
+     <style> 최상단에 _variables.css 내용을 그대로 복사
+     → inject.js가 var(--color-primary) 등을 실제 hex값으로 치환
+
+  3. body 스타일:
+     body {
+       width: 1080px;
+       height: 1350px;
+       margin: 0;
+       padding: 0;
+       overflow: visible;
+       font-family: 'Noto Sans KR', sans-serif;
+       word-break: keep-all;
+       line-height: 1.45;
+       color: var(--color-text);
+       background: var(--color-background);
+     }
+
+  4. 한국어 텍스트 규칙:
+     - word-break: keep-all (단어 중간 잘림 방지)
+     - line-height: 1.45 이상
+     - 헤드라인: 최대 72px, 최소 36px
+     - 모든 텍스트 영역: padding 최소 60px
+
+  5. 플레이스홀더:
+     - {{headline}}, {{subtext}}, {{body}}, {{stat}}, {{stat_label}}
+     - {{item_1}}~{{item_6}}, {{cta_text}}, {{cta_sub}}
+     - {{image_url}}, {{bg_image_url}}, {{academy_name}}, {{card_number}}
+     - inject.js의 injectCard()가 이 플레이스홀더를 실제 값으로 교체
+
+  6. CSS 변수 주입:
+     - inject.js가 academyConfig.theme 값으로 :root 블록을 교체
+     - 예: --color-primary: #2563EB → --color-primary: #081459
+
+  7. <em> 태그 강조:
+     - emphasis_style에 따라 inject.js가 <em class="highlight/color/underline"> 추가
+-->
