@@ -11,7 +11,8 @@
     "test:unit": "vitest run --config vitest.config.js",
     "test:e2e": "vitest run --config vitest.e2e.config.js",
     "test:watch": "vitest --config vitest.config.js",
-    "demo": "node index.js \"초등 영어 학원 선택 기준\" --academy jinhak"
+    "demo": "node index.js \"초등 영어 학원 선택 기준\" --academy jinhak",
+    "guide": "node scripts/employee-guide.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
