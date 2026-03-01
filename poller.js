@@ -179,11 +179,13 @@ async function handleDesignRevisions() {
 // ── ④ 일일 리포트 (매일 오전 9시 1회) ──
 
 async function checkDailyReport() {
-  const now = new Date();
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
   const today = now.toISOString().slice(0, 10);
   const hour = now.getHours();
+  const day = now.getDay();
 
-  if (hour >= 9 && lastReportDate !== today) {
+  // 주중(월~금) 9시 이후에만 전송
+  if (day >= 1 && day <= 5 && hour >= 9 && lastReportDate !== today) {
     try {
       await sendDailyReport();
       lastReportDate = today;
@@ -241,7 +243,7 @@ if (thisFile === mainFile) {
   console.log(`  필터: 카드뉴스 + 최근 30일 + 등록 학원`);
   console.log(`  감지: 기획 착수 / 제작 요청 / 디자인 수정`);
   console.log(`  운영: 월~금 09:00~15:00 KST`);
-  console.log(`  리포트: 매일 09:00 KST`);
+  console.log(`  리포트: 주중 09:00 KST`);
   console.log(`  간격: ${INTERVAL / 1000}초`);
   console.log('');
 
