@@ -47,7 +47,7 @@ async function loadSourceFiles(academyKey) {
 
 // ── STAGE 1: 드래프터 ──
 
-async function draft(topic, academyConfig, cards, comments, cases, links) {
+async function draft(topic, academyConfig, cards, comments, cases, links, keyword = '') {
   const systemPrompt = await readFile(
     join(__dirname, '..', 'prompts', 'blog-drafter-system.txt'),
     'utf-8'
@@ -64,6 +64,7 @@ async function draft(topic, academyConfig, cards, comments, cases, links) {
     `학원 과목: ${academyConfig.subject || ''}`,
     `학원 지역: ${academyConfig.region || ''}`,
     `학원 무드: ${academyConfig.mood?.join(', ') || ''}`,
+    keyword ? `SEO 키워드: ${keyword} (각 섹션에 자연스럽게 1회 포함)` : '',
     '',
     '## 카드뉴스 기획안 (소스 자료)',
     cardSummary,
@@ -180,14 +181,14 @@ async function rewrite(sections, scoreResult, topic, academyConfig, cases, links
  * @param {string[]} comments - 노션 댓글 (소스 자료)
  * @returns {{ sections: Object, scores: Object, flagged: boolean }}
  */
-export async function runBlog(topic, academyKey, academyConfig, cards, comments = []) {
+export async function runBlog(topic, academyKey, academyConfig, cards, comments = [], keyword = '') {
   await log(`📝 블로그 작성 시작: ${topic}`);
 
   const { cases, links } = await loadSourceFiles(academyKey);
 
   // STAGE 1: 초안
   await log('  [1/3] 초안 작성 중...');
-  let draftResult = await draft(topic, academyConfig, cards, comments, cases, links);
+  let draftResult = await draft(topic, academyConfig, cards, comments, cases, links, keyword);
   let sections = draftResult.sections;
 
   let bestSections = { ...sections };

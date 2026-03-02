@@ -30,12 +30,18 @@
 
 ## 공통 필드 (모든 카드에 필수)
 
-- **headline**: 짧고 강렬한 제목 (최대 30자). 강조할 부분은 `<em>` 태그로 감싸세요.
-- **subtext**: headline을 보충하는 1~2문장 (최대 80자).
+- **headline**: 10자 이내. 핵심 메시지만 남긴 짧고 강렬한 제목. 강조할 부분은 `<em>` 태그로 감싸세요.
+- **subtext**: headline을 보충하는 2~3줄 분량 (줄바꿈 `\n` 사용 가능, 총 60자 이내).
 - **emphasis_style**: `<em>` 태그에 적용할 시각 효과. `"highlight"`, `"color"`, `"underline"` 중 하나.
 - **layout_hint**: 레이아웃 힌트. `"big-quote"`, `"stat-highlight"`, `"center-text"`, `"two-column"`, `"list"`, `"icon-grid"`, `"full-image"`, `"minimal"` 중 택1.
 - **icon**: Lucide 아이콘 이름 (예: `"alert-circle"`, `"bar-chart-2"`, `"check-circle"` 등)
 - **image_category**: 학원 실사진 카테고리. `"수업사진"`, `"학생사진"`, `"학원외관"`, `"상담사진"` 중 하나. 필요 없으면 `null`.
+- **visual_hint**: 이 카드에 사용할 시각 자료 유형. 아래 중 하나 또는 `null`.
+  - `"graph"` — 막대/꺾은선 그래프 (데이터·통계 강조 카드)
+  - `"table"` — 표 (비교·정리 카드)
+  - `"photo"` — 학원 실사진 (image_category와 함께 사용)
+  - `"icon-set"` — 아이콘 세트 (목록형 카드)
+  - `"before-after"` — 비포/애프터 대비 (compare 카드)
 
 ## 카드 타입별 추가 필수 필드 ★★★ 반드시 포함하세요 ★★★
 
@@ -191,7 +197,13 @@
 
 ## 주의사항
 
-- 헤드라인이 너무 길면 카드에서 잘립니다. 30자 이내로 작성하세요.
+- ★ headline은 반드시 10자 이내. 초과 시 카드 디자인이 무너집니다.
+- subtext는 2~3줄 분량으로 작성하세요. 1줄은 너무 빈약하고 4줄은 잘립니다.
+- visual_hint는 카드 타입에 맞게 반드시 지정하세요. null 남용 금지.
+  - data 카드 → "graph" 필수
+  - compare 카드 → "before-after" 필수
+  - list/summary 카드 → "icon-set" 또는 "table"
+  - 실사진 활용 카드 → "photo" (image_category 함께 지정)
 - 학부모 관점에서 공감할 수 있는 언어를 사용하세요.
 - 과장하지 말고 신뢰감 있는 톤을 유지하세요.
 - 10번 CTA 카드의 학원명은 "{{ACADEMY_NAME}}" 플레이스홀더를 사용하세요.

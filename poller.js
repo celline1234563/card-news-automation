@@ -104,7 +104,7 @@ async function handleDesignRequests() {
 
       const [result, blogResult] = await Promise.all([
         runPipeline(topic, page.academyKey, { copyData: { cards }, skipResearch: true }),
-        runBlog(topic, page.academyKey, academy, cards, comments.map(c => c.text)),
+        runBlog(topic, page.academyKey, academy, cards, comments.map(c => c.text), page.keyword || ''),
       ]);
 
       const copies = await runCopywriter(cards, topic, academy, {
