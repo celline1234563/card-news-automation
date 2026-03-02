@@ -1,11 +1,12 @@
 import { GoogleGenAI } from '@google/genai';
-import { writeFile, mkdir } from 'fs/promises';
+import { readFile, writeFile, mkdir } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const TEMP_DIR = join(__dirname, '..', 'temp');
+const IMAGER_PROMPT_PATH = join(__dirname, '..', 'prompts', 'imager-system.txt');
 
 let _ai = null;
 function getClient() {
@@ -20,22 +21,60 @@ function getClient() {
 }
 
 /**
+ * imager-system.txt 파싱: 카드 타입별 무드 맵 + 공통 설정 추출
+ */
+let _imagerConfig = null;
+async function loadImagerConfig() {
+  if (_imagerConfig) return _imagerConfig;
+
+  let raw;
+  try {
+    raw = await readFile(IMAGER_PROMPT_PATH, 'utf-8');
+  } catch {
+    // 파일 없으면 기본값 사용
+    _imagerConfig = { moodMap: {}, style: '미니멀, 따뜻한 조명, 부드러운 색감', constraint: '텍스트 가독성을 위해 중앙 영역은 밝고 흐릿하게 처리. 텍스트나 글자는 절대 포함하지 마세요.' };
+    return _imagerConfig;
+  }
+
+  // 카드 타입별 무드 테이블 파싱
+  const moodMap = {};
+  const tableLines = raw.match(/\| (\w+) \| (.+?) \|/g) || [];
+  for (const line of tableLines) {
+    const match = line.match(/\| (\w+) \| (.+?) \|/);
+    if (match && match[1] !== 'type') {
+      moodMap[match[1]] = match[2].trim();
+    }
+  }
+
+  // 공통 스타일 추출
+  const styleMatch = raw.match(/기본 스타일:\s*(.+)/);
+  const style = styleMatch ? styleMatch[1].trim() : '미니멀, 따뜻한 조명, 부드러운 색감';
+
+  // 금지/필수 사항 추출
+  const constraintMatch = raw.match(/필수:\s*(.+)/);
+  const forbidMatch = raw.match(/금지:\s*(.+)/);
+  const constraint = [
+    constraintMatch ? constraintMatch[1].trim() : '',
+    forbidMatch ? forbidMatch[1].trim() : '',
+  ].filter(Boolean).join('. ');
+
+  _imagerConfig = { moodMap, style, constraint };
+  return _imagerConfig;
+}
+
+/**
  * 카드 정보로 이미지 생성 프롬프트 구성
  */
-function buildImagePrompt(card, academyConfig) {
-  const mood = card.type === 'hook' ? '임팩트 있는, 시선을 사로잡는'
-    : card.type === 'cta' ? '따뜻하고 신뢰감 있는, 행동을 유도하는'
-    : card.type === 'data' ? '깔끔하고 전문적인, 데이터 시각화에 적합한'
-    : card.type === 'problem' ? '공감을 자아내는, 학부모의 고민을 담은'
-    : card.type === 'solution' ? '밝고 희망적인, 해결의 느낌'
-    : '미니멀하고 따뜻한';
+async function buildImagePrompt(card, academyConfig) {
+  const config = await loadImagerConfig();
+  const mood = config.moodMap[card.type] || '미니멀하고 따뜻한';
 
   return `한국 학원 인스타그램 카드뉴스 배경 이미지.
 주제: ${card.headline?.replace(/<[^>]+>/g, '') || '교육'}
 카테고리: ${card.image_category || '교육'}
 무드: ${mood}
-스타일: 미니멀, 따뜻한 조명, 부드러운 색감
-중요: 텍스트 가독성을 위해 중앙 영역은 밝고 흐릿하게 처리. 텍스트나 글자는 절대 포함하지 마세요.
+스타일: ${config.style}
+중요: ${config.constraint}
 색감: ${academyConfig.theme.primary} 계열 톤
 세로형 구도 (3:4 비율)`;
 }
@@ -54,7 +93,7 @@ export async function generateCardImage(card, academyConfig) {
 
   await mkdir(TEMP_DIR, { recursive: true });
 
-  const prompt = buildImagePrompt(card, academyConfig);
+  const prompt = await buildImagePrompt(card, academyConfig);
   const paddedNum = String(card.number).padStart(2, '0');
   const outputPath = join(TEMP_DIR, `bg-${paddedNum}.png`);
 
