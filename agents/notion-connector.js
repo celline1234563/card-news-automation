@@ -538,6 +538,134 @@ export async function postRevisionDiff(pageId, oldCards, newCards) {
 // ── ⑪ postErrorComment ──
 
 /**
+ * 블로그 글 + 점수표를 노션 페이지에 작성
+ */
+export async function writeBlog(pageId, sections, scores, flagged = false, failList = '') {
+  // 기존 블로그 섹션 삭제
+  try {
+    const existing = await withRetry(() => notion.blocks.children.list({ block_id: pageId, page_size: 100 }));
+    let inBlogSection = false;
+    for (const block of existing.results) {
+      const text = block[block.type]?.rich_text?.map(t => t.plain_text).join('') || '';
+      if (text.includes('📰 블로그 초안')) inBlogSection = true;
+      if (inBlogSection) {
+        await withRetry(() => notion.blocks.delete({ block_id: block.id }));
+      }
+    }
+  } catch {
+    // 삭제 실패해도 계속
+  }
+
+  const sectionLabels = {
+    problem:   '섹션1 — 문제',
+    empathy:   '섹션2 — 공감',
+    solution:  '섹션3 — 해결',
+    proposal1: '섹션4 — 제안 1',
+    proposal2: '섹션5 — 제안 2',
+    narrowing: '섹션6 — 좁히기',
+    closing:   '마무리',
+    thumbnail: '썸네일',
+  };
+
+  const children = [];
+
+  // 헤더
+  children.push({
+    object: 'block', type: 'heading_2',
+    heading_2: { rich_text: [{ type: 'text', text: { content: '📰 블로그 초안' } }] },
+  });
+
+  if (flagged) {
+    children.push({
+      object: 'block', type: 'callout',
+      callout: {
+        icon: { type: 'emoji', emoji: '⚠️' },
+        rich_text: [{ type: 'text', text: { content: `일부 섹션 점수 미달 (검토 필요): ${failList}` }, annotations: { color: 'red' } }],
+      },
+    });
+  }
+
+  // 점수표
+  const scoreLines = Object.entries(scores)
+    .map(([k, v]) => `${sectionLabels[k] || k}: ${v.score}/10점`)
+    .join('\n');
+  children.push({
+    object: 'block', type: 'callout',
+    callout: {
+      icon: { type: 'emoji', emoji: '📊' },
+      rich_text: [{ type: 'text', text: { content: `섹션별 점수\n${scoreLines}` } }],
+    },
+  });
+
+  children.push({ object: 'block', type: 'divider', divider: {} });
+
+  // 썸네일 (맨 위)
+  if (sections.thumbnail) {
+    const thumbContent = Array.isArray(sections.thumbnail)
+      ? sections.thumbnail.map(t => `• ${t}`).join('\n')
+      : sections.thumbnail;
+    children.push({
+      object: 'block', type: 'callout',
+      callout: {
+        icon: { type: 'emoji', emoji: '🖼️' },
+        rich_text: [{ type: 'text', text: { content: `썸네일\n${thumbContent}` }, annotations: { bold: true } }],
+      },
+    });
+  }
+
+  // 섹션별 블록 (thumbnail, closing 제외)
+  const order = ['problem', 'empathy', 'solution', 'proposal1', 'proposal2', 'narrowing'];
+  for (const key of order) {
+    const content = sections[key];
+    if (!content) continue;
+    const score = scores[key];
+    const label = sectionLabels[key] || key;
+    const flagEmoji = score && score.score < 7 ? '⚠️' : '✅';
+
+    children.push({
+      object: 'block', type: 'heading_3',
+      heading_3: { rich_text: [{ type: 'text', text: { content: `${flagEmoji} ${label} (${score?.score ?? '?'}/10)` } }] },
+    });
+
+    // 2000자 제한 분할
+    const chunks = [];
+    for (let i = 0; i < content.length; i += 1900) chunks.push(content.slice(i, i + 1900));
+    for (const chunk of chunks) {
+      children.push({
+        object: 'block', type: 'paragraph',
+        paragraph: { rich_text: [{ type: 'text', text: { content: chunk } }] },
+      });
+    }
+  }
+
+  // 마무리
+  if (sections.closing) {
+    const score = scores.closing;
+    const flagEmoji = score && score.score < 7 ? '⚠️' : '✅';
+    children.push({
+      object: 'block', type: 'heading_3',
+      heading_3: { rich_text: [{ type: 'text', text: { content: `${flagEmoji} 마무리 (${score?.score ?? '?'}/10)` } }] },
+    });
+    const chunks = [];
+    for (let i = 0; i < sections.closing.length; i += 1900) chunks.push(sections.closing.slice(i, i + 1900));
+    for (const chunk of chunks) {
+      children.push({
+        object: 'block', type: 'paragraph',
+        paragraph: { rich_text: [{ type: 'text', text: { content: chunk } }] },
+      });
+    }
+  }
+
+  // 50개씩 나눠서 append (Notion API 제한)
+  for (let i = 0; i < children.length; i += 50) {
+    await withRetry(() => notion.blocks.children.append({
+      block_id: pageId,
+      children: children.slice(i, i + 50),
+    }));
+  }
+}
+
+/**
  * 에러 발생 시 댓글로 알림
  */
 export async function postErrorComment(pageId, errorMessage) {

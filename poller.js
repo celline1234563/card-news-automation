@@ -7,6 +7,7 @@ import { research } from './agents/researcher.js';
 import { run as runCopywriter } from './agents/copywriter.js';
 import { runPipeline } from './index.js';
 import * as notion from './agents/notion-connector.js';
+import { runBlog } from './agents/blog-runner.js';
 import { parseCardsFromContent } from './agents/card-parser.js';
 import { sendDailyReport } from './agents/daily-reporter.js';
 
@@ -99,19 +100,22 @@ async function handleDesignRequests() {
         continue;
       }
 
-      const result = await runPipeline(topic, page.academyKey, {
-        copyData: { cards },
-        skipResearch: true,
-      });
+      const comments = await notion.getComments(page.id);
+
+      const [result, blogResult] = await Promise.all([
+        runPipeline(topic, page.academyKey, { copyData: { cards }, skipResearch: true }),
+        runBlog(topic, page.academyKey, academy, cards, comments.map(c => c.text)),
+      ]);
 
       const copies = await runCopywriter(cards, topic, academy, {
         keyword: page.keyword,
       });
 
       await notion.writePlanAndCopy(page.id, cards, copies);
+      await notion.writeBlog(page.id, blogResult.sections, blogResult.scores, blogResult.flagged, blogResult.failList);
       await notion.appendFilePaths(page.id, result.pngPaths, page.title, academy.name, academy.drive_folder_id, result.htmlSources);
       await notion.setStatus(page.id, '디자인 1차');
-      await log(`✅ 제작 완료: ${page.title} (${result.pngPaths.length}장)`);
+      await log(`✅ 제작 완료: ${page.title} (카드뉴스 ${result.pngPaths.length}장 + 블로그${blogResult.flagged ? ' ⚠️플래그' : ''})`);
 
     } catch (e) {
       await log(`❌ 제작 실패: ${page.title} — ${e.message}`);
