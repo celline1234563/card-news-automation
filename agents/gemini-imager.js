@@ -69,13 +69,12 @@ async function buildImagePrompt(card, academyConfig) {
   const config = await loadImagerConfig();
   const mood = config.moodMap[card.type] || '미니멀하고 따뜻한';
 
-  return `한국 학원 인스타그램 카드뉴스 배경 이미지.
-주제: ${card.headline?.replace(/<[^>]+>/g, '') || '교육'}
-카테고리: ${card.image_category || '교육'}
+  return `한국 학원 인스타그램 카드뉴스용 사진.
+피사체: ${card.image_category || '교육 관련 오브젝트'}
 무드: ${mood}
-스타일: ${config.style}
-중요: ${config.constraint}
-색감: ${academyConfig.theme.primary} 계열 톤
+스타일: ${config.style}. 피사체 하나에 집중. 깨끗한 배경.
+색감: ${academyConfig.theme.primary} 계열 톤, 채도 낮은 차분한 색감
+중요: ${config.constraint}. 피사체가 중앙에 명확하게.
 세로형 구도 (3:4 비율)`;
 }
 

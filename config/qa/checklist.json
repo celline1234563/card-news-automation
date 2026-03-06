@@ -1,46 +1,59 @@
 {
-  "version": "1.0",
+  "version": "2.0",
   "checks": {
+    "text_line_count": {
+      "severity": "fail",
+      "description": "2~6번 카드 텍스트가 3줄 이내인가",
+      "max_lines": 3,
+      "skip_cards": [1],
+      "auto_fix": false
+    },
+    "image_text_separation": {
+      "severity": "fail",
+      "description": "이미지와 텍스트 영역이 물리적으로 분리됐는가",
+      "auto_fix": false
+    },
+    "color_limit": {
+      "severity": "warn",
+      "description": "브랜드 컬러가 2가지 이내인가",
+      "max_colors": 2,
+      "auto_fix": false,
+      "allowed_hex": ["#FFFFFF", "#ffffff", "#fff", "#111111", "#000000", "#000"]
+    },
+    "visual_point": {
+      "severity": "warn",
+      "description": "비주얼 포인트가 카드당 1개인가",
+      "max_points": 1,
+      "auto_fix": false
+    },
+    "spacing": {
+      "severity": "fail",
+      "description": "사방 여백이 40px 이상이고 safe-area 60px인가",
+      "min_margin": 40,
+      "min_padding": 40,
+      "safe_area": 60,
+      "auto_fix": true
+    },
     "text_overflow": {
       "severity": "fail",
-      "description": "텍스트가 1080x1350px 영역 밖으로 나가는가",
+      "description": "텍스트가 영역 밖으로 나가거나 잘리는가",
       "auto_fix": true
     },
-    "font_missing": {
-      "severity": "fail",
-      "description": "Noto Sans KR 폰트가 로드되는가",
-      "auto_fix": true
-    },
-    "hex_direct": {
+    "brand_consistency": {
       "severity": "warn",
-      "description": "hex 색상이 직접 사용되었는가 (var() 대신)",
-      "auto_fix": false,
-      "allowed_hex": ["#FFFFFF", "#ffffff", "#111111", "#000000", "#fff"]
+      "description": "브랜드 요소(로고, CTA 버튼, 숫자 등)가 올바르게 표시되는가",
+      "auto_fix": false
     },
     "token_font_size": {
       "severity": "warn",
       "description": "토큰에 정의된 폰트 사이즈 스케일을 벗어나는가",
-      "allowed_sizes": [14, 16, 20, 24, 28, 36, 48, 72],
+      "allowed_sizes": [14, 16, 20, 24, 28, 36, 48, 72, 96, 120],
       "tolerance": 4,
       "auto_fix": false
-    },
-    "token_spacing": {
-      "severity": "warn",
-      "description": "safe-area(60px) 미만의 패딩이 사용되는가",
-      "min_padding": 60,
-      "auto_fix": false
-    },
-    "pattern_compliance": {
-      "severity": "warn",
-      "description": "카드 타입에 맞는 레이아웃 패턴을 사용하는가",
-      "auto_fix": false
-    },
-    "series_header_footer": {
-      "severity": "warn",
-      "description": "시리즈 헤더/푸터가 일관적인가",
-      "auto_fix": true
     }
   },
+  "pass_threshold": 6,
+  "fail_checks": ["text_overflow", "image_text_separation", "spacing"],
   "png_qa": {
     "readability_threshold": 6,
     "aesthetic_threshold": 6,

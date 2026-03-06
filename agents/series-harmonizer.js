@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { designCard } from './gemini-designer.js';
 import { buildSystemPrompt } from './prompt-builder.js';
+import { findReference } from './reference-syncer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -137,10 +138,14 @@ export async function harmonizeAndDesign(cards, cssVariables, academyConfig, opt
   const card1 = cards[0];
   const systemPrompt = await buildSystemPrompt(academyKey, academyConfig, options);
 
+  const ref1 = await findReference(academyKey, card1.type);
+  if (ref1) console.log(`  📎 카드 01: 레퍼런스 이미지 사용 (${card1.type})`);
+
   const html1 = await designCard(card1, cssVariables, academyConfig, usedLayouts, {
     ...options,
     academyKey,
     systemPrompt,
+    referenceImage: ref1,
   });
   card1.generated_html = html1;
   const layout1 = card1.layout_hint || 'card-01';
@@ -157,12 +162,15 @@ export async function harmonizeAndDesign(cards, cssVariables, academyConfig, opt
   for (let i = 1; i < cards.length; i++) {
     const card = cards[i];
     const paddedNum = String(card.number).padStart(2, '0');
+    const ref = await findReference(academyKey, card.type);
+    if (ref) console.log(`  📎 카드 ${paddedNum}: 레퍼런스 이미지 사용 (${card.type})`);
     console.log(`  🖌️  카드 ${paddedNum}: DNA 기반 디자인 중...`);
 
     const html = await designCard(card, cssVariables, academyConfig, usedLayouts, {
       ...options,
       academyKey,
       systemPrompt: systemPromptWithDNA,
+      referenceImage: ref,
     });
     card.generated_html = html;
     const layoutLabel = card.layout_hint || `card-${paddedNum}`;
@@ -186,11 +194,13 @@ export async function harmonizeAndDesign(cards, cssVariables, academyConfig, opt
           const card = cards.find(c => c.number === cardNum);
           if (!card) continue;
 
+          const refRetry = await findReference(academyKey, card.type);
           console.log(`  🔄 카드 ${cardNum} 재생성 (시도 ${retry + 1}/${MAX_DESIGN_RETRY})`);
           const newHtml = await designCard(card, cssVariables, academyConfig, usedLayouts, {
             ...options,
             academyKey,
             systemPrompt: systemPromptWithDNA,
+            referenceImage: refRetry,
           });
           card.generated_html = newHtml;
         }

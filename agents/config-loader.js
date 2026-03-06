@@ -65,9 +65,10 @@ export function generateTokenCSSVariables(tokens) {
   lines.push(`  --color-highlight: ${tokens.color.highlight};`);
   lines.push(`  --color-accent: ${tokens.color.accent};`);
 
-  // Surface
+  // Surface (overlay 변수는 제외 — 이미지 위 텍스트 오버레이 금지 정책)
   if (tokens.color.surface) {
     for (const [key, val] of Object.entries(tokens.color.surface)) {
+      if (key.startsWith('overlay')) continue; // overlay 변수 제외
       lines.push(`  --surface-${key.replace(/_/g, '-')}: ${val};`);
     }
   }

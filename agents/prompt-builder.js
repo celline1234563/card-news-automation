@@ -119,10 +119,30 @@ export async function buildCardPrompt(card, cssVariables, academyConfig, usedLay
 
   // {{BG_INSTRUCTION}}
   let bgInstruction;
-  if (card.bg_image_url) {
-    bgInstruction = `배경 이미지 URL: ${card.bg_image_url}\n→ background-image: url('${card.bg_image_url}')로 사용하고, 텍스트 가독성을 위해 반투명 오버레이를 추가하세요.`;
+  if (card.cutout_image_url) {
+    // 누끼 이미지가 있는 경우 (인물 컷아웃)
+    bgInstruction = `누끼 이미지(배경 제거된 인물): ${card.cutout_image_url}
+→ 인물 컷아웃을 카드 한쪽에 배치하세요 (우측 또는 하단)
+→ 배경은 단색 (var(--color-primary) 다크 또는 var(--color-background) 라이트)
+→ 텍스트는 인물 반대편에 배치
+→ 리얼클래스 스타일 참고: 다크 배경 + 인물 컷아웃 + 포인트 텍스트
+→ 인물 이미지에 overflow: hidden 적용, 이미지가 텍스트 영역 침범 금지`;
+  } else if (card.bg_image_url) {
+    bgInstruction = `배경 이미지 URL: ${card.bg_image_url}
+★ 절대 규칙: 이미지 위에 텍스트 오버레이 금지! 반투명 오버레이도 금지!
+→ 이미지 영역과 텍스트 영역을 물리적으로 분리하세요.
+→ 방법 1: 상단 60% 이미지 영역 + 하단 40% 텍스트 영역 (단색 배경)
+→ 방법 2: 좌측 50% 이미지 + 우측 50% 텍스트 (단색 배경)
+→ 방법 3: 하단 40% 이미지 + 상단 60% 텍스트
+→ 이미지 컨테이너: overflow:hidden; 으로 영역 고정
+→ 텍스트 영역 배경: var(--color-background) 또는 #FFFFFF`;
   } else {
-    bgInstruction = `배경 이미지: 없음\n→ CSS 그라디언트로 아름다운 배경을 만드세요. 브랜드 컬러(var(--color-primary), var(--color-secondary))를 활용하세요.`;
+    bgInstruction = `배경 이미지: 없음
+→ 아래 배경 전략 중 하나를 선택하세요:
+→ 전략 A (다크): var(--color-primary) 풀배경 + 흰색 텍스트 — 임팩트 강함
+→ 전략 B (라이트): var(--color-background) 또는 #FFFFFF + 다크 텍스트 — 깔끔
+→ 전략 C (컬러 블록): 상단 var(--color-primary) + 하단 #FFFFFF 영역 분할
+→ ❌ 금지: 그라데이션 남발, 여러 색 혼합, 무지개 배색`;
   }
   template = template.replace('{{BG_INSTRUCTION}}', bgInstruction);
 

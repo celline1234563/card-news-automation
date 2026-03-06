@@ -58,6 +58,119 @@ ${htmlSnippet}
 }
 
 /**
+ * 로컬 체크: 이미지 위 텍스트 오버레이 감지
+ */
+function checkImageTextSeparation(html, card) {
+  // 1번 카드(표지)는 단색/그라디언트 배경 허용
+  if (card.number === 1) return null;
+
+  const issues = [];
+
+  // background-image가 있는 요소에 직접 텍스트가 있는 패턴 감지
+  // rgba 오버레이 + background-image 조합도 금지
+  const hasBgImage = /background-image\s*:\s*url/i.test(html);
+  const hasOverlay = /rgba\s*\([^)]+\)\s*,\s*url|url[^;]*\)\s*[^;]*rgba/i.test(html);
+
+  if (hasBgImage && hasOverlay) {
+    issues.push({
+      check: 'image_text_separation',
+      description: '배경 이미지 위에 오버레이+텍스트 감지 — 이미지와 텍스트 영역을 물리적으로 분리해야 합니다',
+      line_hint: 'background-image + rgba overlay',
+    });
+  }
+
+  // background: url(...) 뒤에 텍스트 요소가 직접 배치된 패턴
+  if (hasBgImage) {
+    // body에 background-image가 직접 있으면 거의 확실히 오버레이
+    if (/body\s*\{[^}]*background-image\s*:\s*url/i.test(html)) {
+      issues.push({
+        check: 'image_text_separation',
+        description: 'body에 배경 이미지가 직접 적용됨 — 이미지와 텍스트 영역을 분리하세요',
+        line_hint: 'body { background-image: url(...) }',
+      });
+    }
+  }
+
+  return issues.length > 0 ? issues : null;
+}
+
+/**
+ * 로컬 체크: 컬러 2가지 제한
+ */
+function checkColorLimit(html) {
+  const issues = [];
+
+  // CSS 변수 사용 추출
+  const varMatches = [...html.matchAll(/var\(--color-([^)]+)\)/g)];
+  const usedColorVars = new Set(varMatches.map(m => m[1]));
+
+  // secondary와 accent를 동시에 사용하면 위반
+  if (usedColorVars.has('secondary') && usedColorVars.has('accent')) {
+    issues.push({
+      check: 'color_limit',
+      description: 'var(--color-secondary)와 var(--color-accent) 동시 사용 — 컬러 2가지 제한 위반',
+      line_hint: '--color-secondary + --color-accent',
+    });
+  }
+
+  // hex 직접 사용 체크 (허용: #FFFFFF, #ffffff, #fff, #111111, #000000, #000)
+  const hexMatches = [...html.matchAll(/#([0-9a-fA-F]{3,8})\b/g)];
+  const allowedHex = new Set(['ffffff', 'fff', '111111', '000000', '000', '111', 'FFFFFF', 'FFF']);
+  for (const m of hexMatches) {
+    const hex = m[1].toLowerCase();
+    // :root 정의 안의 hex는 허용
+    if (allowedHex.has(hex)) continue;
+    // :root { } 블록 안에 있는지 체크 (간단한 휴리스틱)
+    const idx = m.index;
+    const before = html.substring(Math.max(0, idx - 200), idx);
+    if (/:root\s*\{/.test(before) && !before.includes('}')) continue;
+    issues.push({
+      check: 'color_limit',
+      description: `#${m[1]} hex 직접 사용 — var(--color-xxx) 변수를 사용하세요`,
+      line_hint: m[0],
+    });
+  }
+
+  return issues.length > 0 ? issues : null;
+}
+
+/**
+ * 로컬 체크: 여백 검증 (강화)
+ */
+function checkSpacing(html, checklist) {
+  const minPadding = checklist?.checks?.token_spacing?.min_padding || 40;
+  const issues = [];
+
+  // padding 값 추출
+  const padMatches = html.matchAll(/padding\s*:\s*(\d+)px/g);
+  for (const m of padMatches) {
+    const pad = parseInt(m[1]);
+    if (pad < minPadding && pad > 0) {
+      issues.push({
+        check: 'spacing',
+        description: `padding ${pad}px가 최소 여백(${minPadding}px) 미만 — 여백이 부족하면 구린 디자인`,
+        line_hint: m[0],
+      });
+    }
+  }
+
+  // margin 값도 체크 (외곽 여백)
+  const marginMatches = html.matchAll(/margin\s*:\s*(\d+)px/g);
+  for (const m of marginMatches) {
+    const margin = parseInt(m[1]);
+    if (margin < 20 && margin > 0) {
+      issues.push({
+        check: 'spacing',
+        description: `margin ${margin}px가 너무 작음`,
+        line_hint: m[0],
+      });
+    }
+  }
+
+  return issues.length > 0 ? issues : null;
+}
+
+/**
  * 로컬 체크: 토큰 폰트 사이즈 검증
  */
 function checkTokenFontSize(html, checklist) {
@@ -84,30 +197,6 @@ function checkTokenFontSize(html, checklist) {
 }
 
 /**
- * 로컬 체크: safe-area 패딩 검증
- */
-function checkTokenSpacing(html, checklist) {
-  if (!checklist?.checks?.token_spacing) return null;
-  const minPadding = checklist.checks.token_spacing.min_padding || 60;
-  const issues = [];
-
-  // padding 값 추출 (단일 값만 체크)
-  const padMatches = html.matchAll(/padding\s*:\s*(\d+)px/g);
-  for (const m of padMatches) {
-    const pad = parseInt(m[1]);
-    if (pad < minPadding && pad > 0) {
-      issues.push({
-        check: 'token_spacing',
-        description: `padding ${pad}px가 safe-area(${minPadding}px) 미만`,
-        line_hint: m[0],
-      });
-    }
-  }
-
-  return issues.length > 0 ? issues : null;
-}
-
-/**
  * 로컬 체크: 카드 타입에 맞는 패턴 사용 여부
  */
 function checkPatternCompliance(html, card) {
@@ -116,7 +205,7 @@ function checkPatternCompliance(html, card) {
   // CTA 카드는 버튼 요소가 있어야 함
   if (card.type === 'cta' && !/<button|class="[^"]*btn|class="[^"]*cta/i.test(html)) {
     issues.push({
-      check: 'pattern_compliance',
+      check: 'brand_consistency',
       description: 'CTA 카드에 버튼 요소가 없음',
       line_hint: 'button or .cta element missing',
     });
@@ -127,9 +216,22 @@ function checkPatternCompliance(html, card) {
     const statRegex = new RegExp(card.stat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     if (!statRegex.test(html)) {
       issues.push({
-        check: 'pattern_compliance',
+        check: 'brand_consistency',
         description: `data 카드에 stat 숫자(${card.stat})가 HTML에 없음`,
         line_hint: `expected: ${card.stat}`,
+      });
+    }
+  }
+
+  // hook 카드는 큰 font-size가 있어야 함
+  if (card.type === 'hook') {
+    const fontSizes = [...html.matchAll(/font-size\s*:\s*(\d+)px/g)].map(m => parseInt(m[1]));
+    const maxSize = Math.max(0, ...fontSizes);
+    if (maxSize < 36) {
+      issues.push({
+        check: 'brand_consistency',
+        description: `hook 카드 최대 폰트 사이즈가 ${maxSize}px — 최소 36px 이상이어야 임팩트`,
+        line_hint: `max font-size: ${maxSize}px`,
       });
     }
   }
@@ -138,11 +240,28 @@ function checkPatternCompliance(html, card) {
 }
 
 /**
- * 로컬 체크: 시리즈 헤더/푸터 일관성
+ * 로컬 체크: 폰트 로드 확인
  */
-function checkSeriesHeaderFooter(html, card, seriesCards) {
-  // 단일 카드 검증에서는 스킵 (전체 검증에서 처리)
-  return null;
+function checkFontLoading(html) {
+  const issues = [];
+
+  if (!html.includes('fonts.googleapis.com') && !html.includes('Noto Sans KR')) {
+    issues.push({
+      check: 'text_overflow',
+      description: 'Noto Sans KR 폰트가 로드되지 않음',
+      line_hint: '<link> tag missing',
+    });
+  }
+
+  if (!html.includes('word-break')) {
+    issues.push({
+      check: 'text_overflow',
+      description: 'word-break: keep-all 누락 — 한글 단어가 중간에서 잘릴 수 있음',
+      line_hint: 'word-break missing',
+    });
+  }
+
+  return issues.length > 0 ? issues : null;
 }
 
 /**
@@ -153,25 +272,27 @@ function autoFix(html, issues) {
 
   for (const issue of issues) {
     switch (issue.check) {
-      case 'font_missing':
-        if (!fixed.includes('fonts.googleapis.com') && !fixed.includes('Noto Sans KR')) {
-          fixed = fixed.replace('<style>',
-            '<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">\n<style>');
-        }
-        if (!fixed.includes('word-break')) {
-          fixed = fixed.replace('body {', 'body {\n  word-break: keep-all;');
-        }
-        break;
-
       case 'text_overflow':
+        if (issue.description.includes('폰트가 로드되지 않음')) {
+          if (!fixed.includes('fonts.googleapis.com')) {
+            fixed = fixed.replace('<style>',
+              '<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">\n<style>');
+          }
+        }
+        if (issue.description.includes('word-break')) {
+          if (!fixed.includes('word-break: keep-all')) {
+            fixed = fixed.replace('body {', 'body {\n  word-break: keep-all;');
+          }
+        }
         fixed = fixed.replace(/overflow\s*:\s*hidden/g, 'overflow: visible');
         break;
 
-      case 'series_header_footer':
-        // word-break 추가로 텍스트 보호
-        if (!fixed.includes('word-break: keep-all')) {
-          fixed = fixed.replace(/body\s*\{/, 'body {\n  word-break: keep-all;');
-        }
+      case 'spacing':
+        // padding이 너무 작은 것은 수치만 교체
+        fixed = fixed.replace(/padding\s*:\s*([12]\d?)px/g, (match, p) => {
+          const val = parseInt(p);
+          return val < 40 ? `padding: 60px` : match;
+        });
         break;
     }
   }
@@ -188,17 +309,33 @@ export async function validateCard(html, card) {
   const allIssues = [];
   const checklist = await loadChecklist();
 
-  // 로컬 체크 (API 호출 불필요)
+  // === 로컬 체크 (API 호출 불필요) ===
+
+  // 1. 이미지-텍스트 분리
+  const separationIssues = checkImageTextSeparation(html, card);
+  if (separationIssues) allIssues.push(...separationIssues);
+
+  // 2. 컬러 제한
+  const colorIssues = checkColorLimit(html);
+  if (colorIssues) allIssues.push(...colorIssues);
+
+  // 3. 여백
+  const spacingIssues = checkSpacing(html, checklist);
+  if (spacingIssues) allIssues.push(...spacingIssues);
+
+  // 4. 폰트 사이즈
   const fontSizeIssues = checkTokenFontSize(html, checklist);
   if (fontSizeIssues) allIssues.push(...fontSizeIssues);
 
-  const spacingIssues = checkTokenSpacing(html, checklist);
-  if (spacingIssues) allIssues.push(...spacingIssues);
-
+  // 5. 패턴 준수 (브랜드 일관성)
   const patternIssues = checkPatternCompliance(html, card);
   if (patternIssues) allIssues.push(...patternIssues);
 
-  // Claude API 체크 (text_overflow, font_missing, hex_direct)
+  // 6. 폰트 로드
+  const fontIssues = checkFontLoading(html);
+  if (fontIssues) allIssues.push(...fontIssues);
+
+  // === Claude API 체크 (3줄 테스트, 텍스트 오버플로, 전체 품질) ===
   try {
     const result = await validateHTML(html, card);
 
@@ -206,11 +343,17 @@ export async function validateCard(html, card) {
       allIssues.push(...result.issues);
     }
 
+    // 실패 판정: 핵심 체크 위반 시 fail
     const hasFail = allIssues.some(i =>
-      i.check === 'text_overflow' || i.check === 'font_missing'
+      i.check === 'text_overflow' ||
+      i.check === 'image_text_separation' ||
+      i.check === 'spacing'
     );
 
-    if (!hasFail && result.pass) {
+    // 3줄 테스트 2개 이상 위반 시도 fail
+    const lineCountFails = allIssues.filter(i => i.check === 'text_line_count').length;
+
+    if (!hasFail && lineCountFails < 2 && result.pass) {
       return { pass: true, feedback: '', html, issues: allIssues };
     }
 
@@ -223,8 +366,13 @@ export async function validateCard(html, card) {
     };
   } catch (err) {
     // API 검증 실패해도 로컬 체크 결과는 반환
+    const hasFail = allIssues.some(i =>
+      i.check === 'text_overflow' ||
+      i.check === 'image_text_separation' ||
+      i.check === 'spacing'
+    );
     return {
-      pass: allIssues.length === 0,
+      pass: !hasFail,
       feedback: allIssues.length > 0
         ? allIssues.map(i => i.description).join('; ')
         : `검증 스킵: ${err.message}`,
@@ -238,7 +386,7 @@ export async function validateCard(html, card) {
  * Stage 5.5: 전체 카드 HTML 검증
  */
 export async function validateAll(cards) {
-  console.log('  🔎 HTML 품질 검증 시작 (7개 체크)...');
+  console.log('  🔎 HTML 품질 검증 시작 (7개 디자인 규칙 체크)...');
 
   let passCount = 0;
   let fixCount = 0;
@@ -255,7 +403,6 @@ export async function validateAll(cards) {
 
     if (result.pass) {
       passCount++;
-      // 경고만 있는 경우 카운트
       if (result.issues && result.issues.length > 0) {
         warnCount += result.issues.length;
       }

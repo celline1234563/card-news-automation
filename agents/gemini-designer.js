@@ -49,9 +49,21 @@ export async function designCard(card, cssVariables, academyConfig, usedLayouts 
   const systemPrompt = options.systemPrompt || await buildSystemPrompt(academyKey, academyConfig, options);
   const userPrompt = await buildCardPrompt(cardForPrompt, cssVariables, academyConfig, usedLayouts, options);
 
+  // 레퍼런스 이미지가 있으면 multimodal contents로 변환
+  let contents;
+  const ref = options.referenceImage;
+  if (ref) {
+    contents = [
+      { inlineData: { data: ref.base64, mimeType: ref.mimeType } },
+      { text: `[위 이미지는 ${card.type} 타입의 레퍼런스 디자인입니다. 이 스타일을 참고하되 동일하게 복사하지 말고, 브랜드 톤과 레이아웃 감각만 참고하세요.]\n\n${userPrompt}` },
+    ];
+  } else {
+    contents = userPrompt;
+  }
+
   const response = await getClient().models.generateContent({
     model: 'gemini-2.5-flash',
-    contents: userPrompt,
+    contents,
     config: {
       systemInstruction: systemPrompt,
     },

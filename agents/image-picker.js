@@ -12,7 +12,7 @@ let _sheets = null;
 /**
  * Google API 인증 (서비스 계정)
  */
-async function getClients() {
+export async function getClients() {
   if (_drive && _sheets) return { drive: _drive, sheets: _sheets };
 
   const keyPath = process.env.GOOGLE_SERVICE_ACCOUNT_PATH || join(__dirname, '..', 'config', 'google-service-account.json');

@@ -10,6 +10,7 @@ import * as notion from './agents/notion-connector.js';
 import { runBlog } from './agents/blog-runner.js';
 import { parseCardsFromContent } from './agents/card-parser.js';
 import { sendDailyReport } from './agents/daily-reporter.js';
+import { syncAllReferences } from './agents/reference-syncer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -250,6 +251,14 @@ if (thisFile === mainFile) {
   console.log(`  리포트: 주중 09:00 KST`);
   console.log(`  간격: ${INTERVAL / 1000}초`);
   console.log('');
+
+  // 레퍼런스 이미지 Drive → 로컬 동기화
+  try {
+    console.log('  📎 레퍼런스 이미지 동기화...');
+    await syncAllReferences();
+  } catch (err) {
+    console.log(`  ⚠️ 레퍼런스 동기화 실패 (계속 진행): ${err.message}`);
+  }
 
   poll();
   setInterval(poll, INTERVAL);
