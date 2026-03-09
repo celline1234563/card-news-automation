@@ -97,7 +97,7 @@ card-news-automation/
     "target_middle": ["시흥중","문일중","동일중","한울중","가산중","난우중"]
   },
   "toktok": {
-    "name": "톡톡학원", "notion_prefix": "톡톡",
+    "name": "톡톡 잉글리쉬", "notion_prefix": "톡톡",
     "theme": { "primary": "#FF6B2B", "secondary": "#FFFFFF", "background": "#FFF8F5",
                "text": "#1A1A1A", "highlight": "#FFD4B8", "accent": "#E55A1B" },
     "mood": ["깔끔한", "스마트한", "똑부러지는"],

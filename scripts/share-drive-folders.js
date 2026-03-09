@@ -49,19 +49,34 @@ async function main() {
   let fail = 0;
 
   for (const folder of allFolderIds) {
+    // 1) 링크 공유 (누구나 읽기)
+    try {
+      await drive.permissions.create({
+        fileId: folder.id,
+        requestBody: { type: 'anyone', role: 'reader' },
+      });
+      success++;
+      const url = `https://drive.google.com/drive/folders/${folder.id}`;
+      console.log(`  🔗 ${folder.label} → ${url}`);
+    } catch (err) {
+      fail++;
+      console.log(`  ❌ ${folder.label} 링크공유: ${err.message}`);
+    }
+
+    // 2) 개인 계정 writer 권한
     for (const email of SHARE_TO) {
       try {
         await drive.permissions.create({
           fileId: folder.id,
           requestBody: {
             type: 'user',
-            role: 'writer',  // service account는 owner 이전 불가 → writer로 설정
+            role: 'writer',
             emailAddress: email,
           },
           sendNotificationEmail: false,
         });
         success++;
-        console.log(`  ✅ ${folder.label} → ${email}`);
+        console.log(`  👤 ${folder.label} → ${email}`);
       } catch (err) {
         fail++;
         console.log(`  ❌ ${folder.label} → ${email}: ${err.message}`);
@@ -70,8 +85,6 @@ async function main() {
   }
 
   console.log(`\n완료: ${success}건 성공, ${fail}건 실패`);
-  console.log('\n⚠️  서비스 계정은 owner 이전이 불가해서 writer(편집자) 권한으로 공유했습니다.');
-  console.log('폴더 접근 후 본인이 직접 소유권 이전하거나, 새 폴더를 만들어 ID를 교체하세요.');
 }
 
 main().catch(err => {

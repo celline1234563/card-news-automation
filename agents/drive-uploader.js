@@ -21,6 +21,21 @@ async function getDrive() {
   return driveClient;
 }
 
+async function shareFolder(drive, folderId) {
+  try {
+    await drive.permissions.create({
+      fileId: folderId,
+      resource: { role: 'reader', type: 'anyone' },
+      supportsAllDrives: true,
+    });
+  } catch (err) {
+    // 이미 공유된 경우 무시
+    if (!err.message?.includes('already has access')) {
+      console.log(`  ⚠️ 폴더 공유 실패: ${err.message}`);
+    }
+  }
+}
+
 async function getOrCreateFolder(drive, folderName, parentId) {
   const query = parentId
     ? `name='${folderName}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`
@@ -69,6 +84,10 @@ export async function uploadPNGs(pngPaths, academyName, pageTitle, parentFolderI
   // 페이지 제목으로 하위 폴더 생성
   const subFolderName = pageTitle || new Date().toISOString().slice(0, 10);
   const subFolderId = await getOrCreateFolder(drive, subFolderName, academyFolderId);
+
+  // 학원 폴더 + 하위 폴더 링크 공유 (누구나 링크로 접근 가능)
+  await shareFolder(drive, academyFolderId);
+  await shareFolder(drive, subFolderId);
 
   const results = [];
 

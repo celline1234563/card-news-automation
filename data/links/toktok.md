@@ -1,4 +1,4 @@
-# 톡톡학원 — 추천글 링크
+# 톡톡 잉글리쉬 — 추천글 링크
 > 직원이 실제 URL로 업데이트해 주세요. 아래는 예시입니다.
 
 ---
@@ -16,5 +16,5 @@
 - [영어 에세이 쓰는 법, 초등부터 잡아야 하는 이유](https://blog.naver.com/toktok/예시6)
 
 ### 학원 소개·후기
-- [톡톡학원 영어 커리큘럼 전체 소개](https://blog.naver.com/toktok/예시7)
+- [톡톡 잉글리쉬 영어 커리큘럼 전체 소개](https://blog.naver.com/toktok/예시7)
 - [초등 영어학원 선택 기준 5가지](https://blog.naver.com/toktok/예시8)
