@@ -171,10 +171,15 @@ async function classifyImage(drive, ai, image) {
 
 // ── 복사 실행 ──
 
-async function copyToTarget(drive, fileId, targetFolderId) {
-  const res = await drive.files.copy({
-    fileId,
-    requestBody: { parents: [targetFolderId] },
+async function copyToTarget(drive, fileId, fileName, targetFolderId) {
+  // 서비스 계정은 스토리지 용량이 없으므로 바로가기(shortcut)로 생성
+  const res = await drive.files.create({
+    requestBody: {
+      name: fileName,
+      mimeType: 'application/vnd.google-apps.shortcut',
+      shortcutDetails: { targetId: fileId },
+      parents: [targetFolderId],
+    },
     fields: 'id',
   });
   return res.data.id;
@@ -279,7 +284,7 @@ async function main() {
         }
 
         try {
-          await copyToTarget(drive, r.id, targetFolderId);
+          await copyToTarget(drive, r.id, r.name, targetFolderId);
           copied++;
           if (copied % 10 === 0) console.log(`     복사 진행: ${copied}장...`);
         } catch (err) {

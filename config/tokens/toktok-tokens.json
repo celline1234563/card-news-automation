@@ -38,13 +38,13 @@
     "font_url": "https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap",
 
     "size": {
-      "display": 72,
-      "h1": 48,
-      "h2": 36,
-      "h3": 28,
-      "body": 24,
-      "body_small": 20,
-      "caption": 16,
+      "display": 80,
+      "h1": 56,
+      "h2": 30,
+      "h3": 32,
+      "body": 26,
+      "body_small": 22,
+      "caption": 18,
       "small": 14
     },
 
@@ -55,9 +55,9 @@
     },
 
     "line_height": {
-      "tight": 1.2,
-      "normal": 1.4,
-      "relaxed": 1.6
+      "tight": 1.15,
+      "normal": 1.3,
+      "relaxed": 1.35
     }
   },
 

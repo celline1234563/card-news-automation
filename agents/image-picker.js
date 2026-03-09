@@ -93,20 +93,48 @@ async function recordUsedImage(academyKey, fileId, category) {
 }
 
 /**
- * Drive 폴더에서 이미지 후보 조회
+ * Drive 폴더에서 이미지 후보 조회 (바로가기 shortcut도 포함)
  */
 async function listImagesInFolder(folderId) {
   if (!folderId) return [];
 
   try {
     const { drive } = await getClients();
-    const response = await drive.files.list({
+
+    // 1) 직접 이미지 파일
+    const imageRes = await drive.files.list({
       q: `'${folderId}' in parents and mimeType contains 'image/' and trashed = false`,
       fields: 'files(id, name, mimeType, createdTime, description)',
       orderBy: 'createdTime desc',
       pageSize: 50,
     });
-    return response.data.files || [];
+    const images = imageRes.data.files || [];
+
+    // 2) 바로가기(shortcut) → 원본이 이미지인 것만
+    const shortcutRes = await drive.files.list({
+      q: `'${folderId}' in parents and mimeType = 'application/vnd.google-apps.shortcut' and trashed = false`,
+      fields: 'files(id, name, shortcutDetails)',
+      pageSize: 100,
+    });
+    const shortcuts = shortcutRes.data.files || [];
+
+    for (const sc of shortcuts) {
+      const targetId = sc.shortcutDetails?.targetId;
+      if (!targetId) continue;
+      try {
+        const meta = await drive.files.get({
+          fileId: targetId,
+          fields: 'id, name, mimeType, createdTime, description',
+        });
+        if (meta.data.mimeType?.startsWith('image/')) {
+          images.push(meta.data);
+        }
+      } catch {
+        // 원본 삭제된 바로가기 무시
+      }
+    }
+
+    return images;
   } catch {
     return [];
   }
