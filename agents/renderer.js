@@ -208,11 +208,21 @@ export async function renderCards(cards, cssVariables, academyName, outputDir) {
       // {{BG_IMAGE_URL}} 플레이스홀더를 실제 data URI로 치환
       if (card.bg_image_url && html.includes('{{BG_IMAGE_URL}}')) {
         try {
-          const imgBuffer = await readFile(card.bg_image_url);
-          const dataUri = `data:image/png;base64,${imgBuffer.toString('base64')}`;
+          let imgBuffer;
+          if (card.bg_image_url.startsWith('http')) {
+            // Drive URL 등 원격 이미지 → fetch로 다운로드
+            const res = await fetch(card.bg_image_url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            imgBuffer = Buffer.from(await res.arrayBuffer());
+          } else {
+            // 로컬 파일 (Imagen 생성 이미지)
+            imgBuffer = await readFile(card.bg_image_url);
+          }
+          const mimeType = card.bg_image_url.startsWith('http') ? 'image/jpeg' : 'image/png';
+          const dataUri = `data:${mimeType};base64,${imgBuffer.toString('base64')}`;
           html = html.replaceAll('{{BG_IMAGE_URL}}', dataUri);
-        } catch {
-          console.log(`  ⚠️  카드 ${String(card.number).padStart(2, '0')}: 배경 이미지 로드 실패, 무시`);
+        } catch (err) {
+          console.log(`  ⚠️  카드 ${String(card.number).padStart(2, '0')}: 배경 이미지 로드 실패 (${err.message}), 무시`);
         }
       }
 

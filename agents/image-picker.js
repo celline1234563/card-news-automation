@@ -208,6 +208,12 @@ export async function pickImage(card, academyKey) {
 }
 
 /**
+ * 누끼(배경 제거) 대상 카테고리 — 이 카테고리는 image_url로 설정 → bg-remover에서 처리
+ * 나머지 카테고리(수업사진, 학원외관 등)는 bg_image_url로 설정 → 영역 분리 레이아웃으로 사용
+ */
+const CUTOUT_CATEGORIES = new Set(['선생님사진', '학생사진', '인물', '원장님사진', '상담사진']);
+
+/**
  * 전체 카드 이미지 매칭
  */
 export async function pickAllImages(cards, academyKey) {
@@ -224,9 +230,15 @@ export async function pickAllImages(cards, academyKey) {
 
     const url = await pickImage(card, academyKey);
     if (url) {
-      card.image_url = url;
+      if (CUTOUT_CATEGORIES.has(card.image_category)) {
+        // 인물 카테고리 → image_url (bg-remover에서 누끼 처리)
+        card.image_url = url;
+      } else {
+        // 수업사진, 학원외관 등 → bg_image_url (영역 분리 레이아웃으로 직접 사용)
+        card.bg_image_url = url;
+      }
       matchCount++;
-      console.log(`  ✅ 카드 ${String(card.number).padStart(2, '0')}: ${card.image_category} → 매칭 완료`);
+      console.log(`  ✅ 카드 ${String(card.number).padStart(2, '0')}: ${card.image_category} → 매칭 완료 (${CUTOUT_CATEGORIES.has(card.image_category) ? '누끼용' : '배경용'})`);
     } else {
       skipCount++;
       console.log(`  ⏭ 카드 ${String(card.number).padStart(2, '0')}: ${card.image_category} → 이미지 없음 (스킵)`);
