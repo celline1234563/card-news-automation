@@ -61,16 +61,34 @@ export async function designCard(card, cssVariables, academyConfig, usedLayouts 
     contents = userPrompt;
   }
 
-  const response = await getClient().models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents,
-    config: {
-      systemInstruction: systemPrompt,
-    },
-  });
+  const maxRetries = 3;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const response = await getClient().models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents,
+      config: {
+        systemInstruction: systemPrompt,
+      },
+    });
 
-  const html = extractHTML(response.text);
-  return html;
+    const responseText = response.text;
+    if (!responseText) {
+      console.log(`  ⚠️ 카드 ${card.number}: Gemini 응답이 비어있음 (시도 ${attempt}/${maxRetries})`);
+      if (attempt === maxRetries) {
+        throw new Error(`Gemini 응답이 비어있습니다 (카드 ${card.number}). 안전 필터에 의해 차단되었을 수 있습니다.`);
+      }
+      await new Promise(r => setTimeout(r, 5000));
+      continue;
+    }
+
+    try {
+      return extractHTML(responseText);
+    } catch (e) {
+      console.log(`  ⚠️ 카드 ${card.number}: HTML 추출 실패 (시도 ${attempt}/${maxRetries})`);
+      if (attempt === maxRetries) throw e;
+      await new Promise(r => setTimeout(r, 5000));
+    }
+  }
 }
 
 /**
