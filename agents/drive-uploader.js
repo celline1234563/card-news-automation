@@ -11,7 +11,7 @@ let driveClient = null;
 
 async function getDrive() {
   if (driveClient) return driveClient;
-  const credsPath = join(__dirname, '..', 'config', 'google-service-account.json');
+  const credsPath = process.env.GOOGLE_SERVICE_ACCOUNT_PATH || join(__dirname, '..', 'config', 'google-service-account.json');
   const creds = JSON.parse(await readFile(credsPath, 'utf-8'));
   const auth = new google.auth.GoogleAuth({
     credentials: creds,
