@@ -143,6 +143,13 @@ export async function generateAllImages(cards, academyConfig) {
       continue;
     }
 
+    // Drive 실사진이 이미 매칭된 카드는 Imagen 생성 스킵
+    if (card.bg_image_url || card.image_url) {
+      console.log(`  ⏭️  카드 ${paddedNum}: Drive 실사진 이미 매칭됨 → Imagen 스킵`);
+      skipped++;
+      continue;
+    }
+
     console.log(`  🖼️  카드 ${paddedNum}: "${card.image_category}" 이미지 생성 중...`);
     const imagePath = await generateCardImage(card, academyConfig);
 
