@@ -321,8 +321,8 @@ HTML 구조
 ```
 
 ## <em> 태그 강조 스타일
-- emphasis_style이 highlight → em { background: linear-gradient(to top, var(--color-highlight) 30%, transparent 30%); font-style: normal; padding: 0; margin: 0; display: inline; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
-  ⚠️ 절대 규칙: background는 반드시 linear-gradient 방식으로! 글자 하단 30%만 칠하는 얇은 밑줄 마커 스타일. 단색 background 사용 금지!
+- emphasis_style이 highlight → em { background: linear-gradient(to top, var(--color-highlight) 50%, transparent 50%); font-style: normal; padding: 0; margin: 0; display: inline; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  ⚠️ 절대 규칙: background는 반드시 linear-gradient 방식으로! 글자 하단 50%를 칠하는 형광펜 마커 스타일. 단색 background 사용 금지!
 - emphasis_style이 color → em { color: var(--color-primary); font-weight: 900; font-style: normal; }
 - emphasis_style이 underline → em { border-bottom: 6px solid var(--color-accent); font-style: normal; padding-bottom: 2px; }
 
@@ -332,7 +332,7 @@ HTML 구조
 
 ### 다크 배경일 때 (var(--color-primary), var(--color-text), 짙은 단색)
 - 일반 텍스트: #FFFFFF (흰색)
-- em highlight: em { background: linear-gradient(to top, var(--color-accent) 30%, transparent 30%); color: #FFFFFF; }
+- em highlight: em { background: linear-gradient(to top, var(--color-accent) 50%, transparent 50%); color: #FFFFFF; }
   → var(--color-highlight)는 다크 배경에서 안 보임. 반드시 var(--color-accent) 또는 밝은 색으로 교체
 - em color: em { color: var(--color-secondary); } 또는 em { color: var(--color-accent); }
   → var(--color-primary)는 배경과 같은 색이므로 절대 사용 금지
