@@ -114,6 +114,8 @@ export async function buildCardPrompt(card, cssVariables, academyConfig, usedLay
     card.after_title ? `비교 우측: ${card.after_title}` : null,
     card.before_items ? `좌측 항목: ${card.before_items}` : null,
     card.after_items ? `우측 항목: ${card.after_items}` : null,
+    card.deco_icons ? `장식 아이콘: ${JSON.stringify(card.deco_icons)} (배경 장식용 Lucide 아이콘, 120~200px, opacity 0.08~0.15)` : null,
+    card.design_brief ? `디자인 브리프: ${card.design_brief}` : null,
   ].filter(Boolean).join('\n');
   template = template.replace('{{CARD_FIELDS}}', fields);
 

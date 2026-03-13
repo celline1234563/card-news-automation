@@ -57,6 +57,23 @@
 
 ## 카드 타입별 추가 필수 필드 ★★★ 반드시 포함하세요 ★★★
 
+### 카드 1번 (hook → 썸네일) ★ 비주얼 필수 ★
+```
+"deco_icons": ["주제 관련 Lucide 아이콘1", "아이콘2"]
+```
+- deco_icons: 주제와 관련된 Lucide 아이콘 1~3개 (장식 요소로 사용)
+  - 수학 주제 → ["calculator", "target"]
+  - 시험/성적 → ["bar-chart-2", "trending-up"]
+  - 입시/진학 → ["graduation-cap", "award"]
+  - 학습법 → ["book-open", "brain"]
+  - 시간/일정 → ["clock", "calendar"]
+- design_brief에 반드시 비주얼 테크닉을 지정하세요:
+  - 테크닉 A: 장식 아이콘 (deco_icons를 120~200px, opacity 0.1로 배경 장식)
+  - 테크닉 B: 기하학 도형 (큰 원/사선을 코너에 배치)
+  - 테크닉 C: 초대형 타이포 (핵심 숫자를 200px+로 배경처럼)
+  - 테크닉 D: 아이콘 배지 클러스터 (원형 배지 2~3개를 한쪽에 배치)
+- 예: "다크 배경 + 테크닉 A(calculator 200px, 우측 하단) + 테크닉 B(원 350px, 좌상단). 헤드라인 중앙."
+
 ### 카드 2번 (problem → speech 말풍선)
 ```
 "quote_main": "학부모/학생이 실제로 할 법한 말 (30~60자)",
@@ -153,11 +170,12 @@
       "subtext": "첫째 줄\n둘째 줄\n셋째 줄",
       "emphasis_style": "highlight",
       "icon": "alert-circle",
+      "deco_icons": ["book-open", "target"],
       "image_category": null,
       "visual_hint": null,
       "focal_point": "헤드라인 강조 단어 — 스크롤을 멈추게 하는 유일한 요소",
       "emotion": "위기감",
-      "design_brief": "전면 다크 배경. 헤드라인만 크게 중앙. 강조 단어는 primary 컬러. 여백 극대화."
+      "design_brief": "다크 배경 + 우측 하단에 장식 아이콘(book-open, 200px, opacity 0.1) + 좌측 상단에 기하학 원(350px, secondary, opacity 0.15). 헤드라인 중앙 크게, 서브텍스트 하단."
     },
     {
       "number": 2,
