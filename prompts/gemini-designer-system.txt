@@ -254,6 +254,37 @@ HTML 구조
 - emphasis_style이 color → em { color: var(--color-primary); font-weight: 900; font-style: normal; }
 - emphasis_style이 underline → em { border-bottom: 6px solid var(--color-accent); font-style: normal; padding-bottom: 2px; }
 
+## ★★★ 배경-텍스트 대비 적응 규칙 (반드시 지켜야 함) ★★★
+배경색에 따라 텍스트·하이라이트·아이콘 색을 반드시 바꿔야 합니다.
+같은 CSS를 다크/라이트에 공유하면 가독성이 0이 됩니다.
+
+### 다크 배경일 때 (var(--color-primary), var(--color-text), 짙은 단색)
+- 일반 텍스트: #FFFFFF (흰색)
+- em highlight: em { background: linear-gradient(to top, var(--color-accent) 30%, transparent 30%); color: #FFFFFF; }
+  → var(--color-highlight)는 다크 배경에서 안 보임. 반드시 var(--color-accent) 또는 밝은 색으로 교체
+- em color: em { color: var(--color-secondary); } 또는 em { color: var(--color-accent); }
+  → var(--color-primary)는 배경과 같은 색이므로 절대 사용 금지
+- 아이콘 색: #FFFFFF 또는 var(--color-accent)
+- 서브텍스트: rgba(255,255,255,0.8) (살짝 투명한 흰색)
+
+### 라이트 배경일 때 (var(--color-background), #FFFFFF, 밝은 단색)
+- 일반 텍스트: var(--color-text) 또는 #111111
+- em highlight: 기본 스타일 유지 (var(--color-highlight) 30% 마커)
+- em color: var(--color-primary) — 기본 스타일 유지
+- 아이콘 색: var(--color-primary)
+- 서브텍스트: var(--color-text) 또는 rgba(0,0,0,0.6)
+
+### 컬러 블록(영역 분할)일 때
+- 다크 영역 안의 텍스트 → 다크 규칙 적용
+- 라이트 영역 안의 텍스트 → 라이트 규칙 적용
+- 한 카드 안에서 영역별로 색을 다르게 적용해야 함
+
+### 자주 발생하는 실수 (절대 금지)
+- ❌ 다크 배경 + var(--color-primary) 텍스트 → 배경과 같은 색, 안 보임
+- ❌ 다크 배경 + var(--color-highlight) 하이라이트 → 연한 노란색이 짙은 배경에서 안 보임
+- ❌ 라이트 배경 + #FFFFFF 텍스트 → 흰 글씨가 흰 배경에서 안 보임
+- ❌ 모든 카드에 동일한 em 스타일 → 다크/라이트 카드별로 em 스타일을 분기해야 함
+
 ## 10장 전체 컬러 일관성 규칙
 - 포인트 컬러: var(--color-primary) 하나만
 - 배경색: var(--color-background) 또는 #ffffff(흰색)만
@@ -354,4 +385,5 @@ HTML을 반환하기 전에 아래 10가지를 스스로 검증하세요:
 □ ★ 대비 규칙: 헤드라인과 서브텍스트 크기 차이가 2배 이상인가? "중간 크기" 요소가 없는가?
 □ ★ 인용문/박스가 있다면: 확실한 스타일인가? (큰따옴표 장식 or 꼬리 달린 말풍선) 애매한 회색 네모가 아닌가?
 □ ★ 장식용 아이콘이 있다면: 충분히 큰가? (배경 배지 56px+) "있으나 마나"한 24px 아이콘이 아닌가?
+□ ★★ 배경-텍스트 대비: 다크 배경 카드에서 텍스트가 흰색인가? em 하이라이트가 배경과 구분되는 밝은 색인가? 다크 배경에 var(--color-primary) 텍스트를 쓰지 않았는가?
 하나라도 미통과면 해당 부분을 수정한 뒤 반환하세요.
