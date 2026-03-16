@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { readFile } from 'fs/promises';
+import { readFile, readdir } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -7,6 +7,28 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const client = new Anthropic();
+
+/**
+ * 학원별 케이스 데이터(MD 파일) 자동 로드
+ * data/cases/{academyKey}/ 폴더의 모든 .md 파일을 읽어서 주제와 관련된 것만 반환
+ */
+async function loadCaseData(academyKey, topic) {
+  const casesDir = join(__dirname, '..', 'data', 'cases', academyKey);
+  try {
+    const files = await readdir(casesDir);
+    const mdFiles = files.filter(f => f.endsWith('.md'));
+    if (mdFiles.length === 0) return null;
+
+    const contents = [];
+    for (const file of mdFiles) {
+      const text = await readFile(join(casesDir, file), 'utf-8');
+      contents.push(`### ${file.replace('.md', '')}\n${text}`);
+    }
+    return contents.join('\n\n---\n\n');
+  } catch {
+    return null;
+  }
+}
 
 /**
  * 주제 리서치 + 카드 10장 카피 생성 (Claude API + web_search)
@@ -18,6 +40,8 @@ const client = new Anthropic();
  * @param {string[]} [options.comments] - 담당자 재료 댓글
  * @param {string} [options.pageContent] - 기획자 작성 기획 문서
  * @param {string[]} [options.revisionInstructions] - @수정 지시
+ * @param {string} [options.academyKey] - 학원 키 (케이스 데이터 로드용)
+ * @param {string[]} [options.contentTypes] - 콘텐츠 타입 (예: ["09-성적향상후기"])
  */
 export async function research(topic, academyName, options = {}) {
   // 매 호출마다 파일 읽기 (핫리로드)
@@ -36,6 +60,15 @@ export async function research(topic, academyName, options = {}) {
     parts.push(`\n메인키워드: ${options.keyword} — 원고에 자연스럽게 포함`);
   }
 
+  if (options.contentTypes && options.contentTypes.length > 0) {
+    parts.push(`\n콘텐츠 타입: ${options.contentTypes.join(', ')}`);
+    parts.push('이 콘텐츠 타입의 특성에 맞게 카드 구조와 톤을 조정하세요.');
+    parts.push('예: 성적향상후기 → 실제 성과 데이터·수치 중심, 자부심/자신감 톤');
+    parts.push('예: 입시정보 → 긴장감 톤, 시기별 전략 강조');
+    parts.push('예: 학습법 → 실용적 톤, 구체적 실천법 제시');
+    parts.push('예: 학원소식 → 신뢰감/활기 톤, 시스템·이벤트 소개');
+  }
+
   if (options.pageContent) {
     parts.push(`\n아래는 기획자가 작성한 기획 문서입니다. 이 구조를 기반으로 기획안을 작성하세요:`);
     parts.push(options.pageContent);
@@ -48,6 +81,16 @@ export async function research(topic, academyName, options = {}) {
 
   if (options.revisionInstructions && options.revisionInstructions.length > 0) {
     parts.push(`\n수정 지시: ${options.revisionInstructions.join('\n')} — 기존 기획안에서 이 부분만 수정해서 다시 작성`);
+  }
+
+  // 학원별 케이스 데이터 자동 로드
+  if (options.academyKey) {
+    const caseData = await loadCaseData(options.academyKey, topic);
+    if (caseData) {
+      parts.push(`\n아래는 이 학원의 프로그램·사례·소개 자료입니다. 주제와 관련된 내용을 적극 반영하세요:`);
+      parts.push(caseData);
+      console.log(`  📚 케이스 데이터 로드 완료 (${options.academyKey})`);
+    }
   }
 
   parts.push('\nweb_search로 리서치 후 카드 10장 카피를 JSON으로 작성해주세요.');

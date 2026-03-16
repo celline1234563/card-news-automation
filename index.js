@@ -23,22 +23,31 @@ function parseArgs() {
   const args = process.argv.slice(2);
   let topic = null;
   let academyId = process.env.DEFAULT_ACADEMY || 'jinhak';
+  let notionPage = null;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--academy' && args[i + 1]) {
       academyId = args[i + 1];
+      i++;
+    } else if (args[i] === '--notion-page' && args[i + 1]) {
+      notionPage = args[i + 1];
       i++;
     } else if (!args[i].startsWith('--')) {
       topic = args[i];
     }
   }
 
+  // --notion-page가 있으면 topic으로도 사용
+  if (!topic && notionPage) {
+    topic = notionPage;
+  }
+
   if (!topic) {
-    console.error('사용법: node index.js "주제" [--academy 학원ID]');
+    console.error('사용법: node index.js "주제" [--academy 학원ID] [--notion-page "페이지제목"]');
     process.exit(1);
   }
 
-  return { topic, academyId };
+  return { topic, academyId, notionPage };
 }
 
 /**
@@ -76,7 +85,7 @@ export async function runPipeline(topic, academyId, options = {}) {
   if (!options.skipResearch) {
     // ── Stage 1: 리서치 + 카피 생성 ──
     console.log('▶ Stage 1: 리서치 + 카피 생성');
-    copyData = await research(topic, academy.name);
+    copyData = await research(topic, academy.name, { academyKey: academyId });
     console.log(`  리서치 요약: ${copyData.research_summary?.substring(0, 100)}...\n`);
 
     // rate limit 방지
@@ -99,7 +108,7 @@ export async function runPipeline(topic, academyId, options = {}) {
   // ── Stage 2.5: 실사진 매칭 (Drive) ──
   console.log('▶ Stage 2.5: 실사진 매칭');
   try {
-    await pickAllImages(copyData.cards, academyId);
+    await pickAllImages(copyData.cards, academyId, options.photoAssignments || new Map());
   } catch (err) {
     console.log(`  ⚠️ 이미지 매칭 스킵: ${err.message}`);
   }
@@ -173,9 +182,62 @@ const thisFile = fileURLToPath(import.meta.url);
 const mainFile = process.argv[1] ? resolve(process.argv[1]) : '';
 
 if (thisFile === mainFile) {
-  const { topic, academyId } = parseArgs();
-  runPipeline(topic, academyId).catch(err => {
-    console.error('\n❌ 에러 발생:', err.message);
-    process.exit(1);
-  });
+  const { topic, academyId, notionPage } = parseArgs();
+  runPipeline(topic, academyId)
+    .then(async (result) => {
+      if (notionPage) {
+        await uploadToNotion(notionPage, academyId, result);
+      }
+    })
+    .catch(err => {
+      console.error('\n❌ 에러 발생:', err.message);
+      process.exit(1);
+    });
+}
+
+/**
+ * 파이프라인 완료 후 노션 페이지에 결과물 업로드
+ */
+async function uploadToNotion(notionPageTitle, academyId, result) {
+  try {
+    const notion = await import('./agents/notion-connector.js');
+    const configLoader = await import('./agents/config-loader.js');
+
+    console.log('');
+    console.log('▶ Stage 8: 노션 업로드');
+
+    // 노션에서 페이지 찾기 — 모든 상태에서 제목으로 검색
+    const statuses = ['기획착수', '기획 착수', '기획컨펌대기', '기획 컨펌', '원고작업', '제작 요청'];
+    let targetPage = null;
+
+    for (const status of statuses) {
+      const pages = await notion.getByStatus(status);
+      targetPage = pages.find(p => p.title.includes(notionPageTitle.replace(/[\[\]]/g, '')));
+      if (targetPage) break;
+    }
+
+    if (!targetPage) {
+      console.log(`  ⚠️ 노션 페이지를 찾을 수 없음: ${notionPageTitle}`);
+      return;
+    }
+
+    console.log(`  📄 페이지 발견: ${targetPage.title}`);
+
+    const { academy } = await configLoader.loadConfig(academyId);
+    await notion.appendFilePaths(
+      targetPage.id,
+      result.pngPaths,
+      targetPage.title,
+      academy.name,
+      academy.drive_folder_id,
+      result.htmlSources
+    );
+    console.log(`  ✅ PNG ${result.pngPaths.length}장 노션에 업로드 완료`);
+
+    await notion.setStatus(targetPage.id, '디자인 1차');
+    console.log(`  ✅ 상태 → 디자인 1차`);
+
+  } catch (err) {
+    console.log(`  ❌ 노션 업로드 실패: ${err.message}`);
+  }
 }

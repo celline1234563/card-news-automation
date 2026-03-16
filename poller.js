@@ -105,9 +105,10 @@ async function handleDesignRequests() {
       }
 
       const comments = await notion.getComments(page.id);
+      const photoAssignments = await notion.getPhotoAssignments(page.id);
 
       const [result, blogResult] = await Promise.all([
-        runPipeline(topic, page.academyKey, { copyData: { cards }, skipResearch: true }),
+        runPipeline(topic, page.academyKey, { copyData: { cards }, skipResearch: true, photoAssignments }),
         runBlog(topic, page.academyKey, academy, cards, comments.map(c => c.text), page.keyword || ''),
       ]);
 

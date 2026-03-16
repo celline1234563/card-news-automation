@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { Client } from '@notionhq/client';
-import { readFile } from 'fs/promises';
+import { readFile, stat } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -8,6 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
+const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const DATASOURCE_ID = process.env.NOTION_DATASOURCE_ID;
 
 // ── API 재시도 래퍼 ──
@@ -93,6 +94,7 @@ export async function getByStatus(statusValue) {
     const keyword = props['메인 키워드']?.rich_text?.map(t => t.plain_text).join('') || '';
     const academyKey = await extractAcademyKey(title);
     const statuses = (props['상태']?.multi_select || []).map(s => s.name);
+    const contentTypes = (props['콘텐츠 타입']?.multi_select || []).map(s => s.name);
 
     pages.push({
       id: page.id,
@@ -100,6 +102,7 @@ export async function getByStatus(statusValue) {
       academyKey,
       keyword,
       statuses,
+      contentTypes,
       statusChangedAt: page.last_edited_time,
     });
   }
@@ -133,6 +136,38 @@ export async function getRevisionInstructions(pageId, afterTime) {
     if (instruction) instructions.push(instruction);
   }
   return instructions;
+}
+
+// ── ③-b getPhotoAssignments ──
+
+/**
+ * 노션 댓글에서 @사진 지정 파싱
+ * 형식: @사진 카드3 파일명.png  또는  @사진 카드3 수업사진/파일명.png
+ * 여러 줄로 여러 카드 지정 가능
+ * @returns {Map<number, string>} cardNumber → fileName
+ */
+export async function getPhotoAssignments(pageId) {
+  const response = await withRetry(() => notion.comments.list({ block_id: pageId }));
+  const assignments = new Map();
+
+  for (const comment of response.results) {
+    const text = comment.rich_text?.map(t => t.plain_text).join('') || '';
+    if (!text.includes('@사진')) continue;
+
+    // 각 줄을 개별 처리
+    const lines = text.split('\n');
+    for (const line of lines) {
+      // @사진 카드3 파일명.png  또는  @사진 3 파일명.png
+      const match = line.match(/@사진\s+카드?(\d+)\s+(.+)/);
+      if (match) {
+        const cardNum = parseInt(match[1]);
+        const fileName = match[2].trim();
+        assignments.set(cardNum, fileName);
+      }
+    }
+  }
+
+  return assignments;
 }
 
 // ── ④ getPageContent ──
@@ -340,22 +375,61 @@ export async function appendFilePaths(pageId, pngPaths, pageTitle, academyName, 
     }
   } catch {}
 
-  // Drive 업로드
-  let driveFiles = [];
-  let driveFolderIdResult = null;
-  let htmlFiles = [];
-  if (academyName) {
+  // PNG 파일 존재 여부 사전 체크
+  for (const pngPath of pngPaths) {
     try {
-      const { uploadPNGs, uploadHTMLs } = await import('./drive-uploader.js');
-      const uploadResult = await uploadPNGs(pngPaths, academyName, pageTitle, driveFolderId);
-      driveFiles = uploadResult.files;
-      driveFolderIdResult = uploadResult.folderId;
+      await stat(pngPath);
+    } catch {
+      throw new Error(`PNG 파일이 존재하지 않습니다: ${pngPath}`);
+    }
+  }
 
-      if (htmlSources && htmlSources.length > 0 && driveFolderIdResult) {
-        htmlFiles = await uploadHTMLs(htmlSources, driveFolderIdResult);
+  // Notion 직접 이미지 업로드
+  const uploadedFileIds = [];
+  console.log(`  📤 노션 이미지 업로드 시작 (${pngPaths.length}장)...`);
+  for (const pngPath of pngPaths) {
+    try {
+      const fileName = pngPath.split(/[\\/]/).pop();
+      const fileStats = await stat(pngPath);
+      const fileBuffer = await readFile(pngPath);
+
+      // Step 1: 업로드 세션 생성
+      const upload = await withRetry(() => notion.fileUploads.create({
+        mode: 'single_part',
+        filename: fileName,
+        content_type: 'image/png',
+        content_length: fileStats.size,
+      }));
+
+      // Step 2: multipart로 파일 전송
+      const boundary = '----NotionUpload' + Date.now() + Math.random().toString(36).slice(2);
+      const body = Buffer.concat([
+        Buffer.from(`--${boundary}\r\n`),
+        Buffer.from(`Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n`),
+        Buffer.from('Content-Type: image/png\r\n\r\n'),
+        fileBuffer,
+        Buffer.from(`\r\n--${boundary}--\r\n`),
+      ]);
+
+      const res = await fetch(`https://api.notion.com/v1/file_uploads/${upload.id}/send`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_API_KEY}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body,
+      });
+
+      if (res.ok) {
+        uploadedFileIds.push(upload.id);
+        console.log(`  ✅ ${fileName} 업로드 완료`);
+      } else {
+        const err = await res.json();
+        console.log(`  ⚠️ ${fileName} 실패: ${err.message}`);
       }
     } catch (e) {
-      console.log(`  ⚠️ Drive 업로드 실패: ${e.message} — 파일 경로만 기록`);
+      console.log(`  ⚠️ 업로드 실패: ${e.message}`);
     }
   }
 
@@ -369,23 +443,33 @@ export async function appendFilePaths(pageId, pngPaths, pageTitle, academyName, 
     },
   });
 
-  if (driveFiles.length > 0 && driveFolderIdResult) {
-    // Drive 폴더 링크만 공유 (이미지 embed 대신)
-    const folderUrl = `https://drive.google.com/drive/folders/${driveFolderIdResult}`;
-    children.push({
-      object: 'block',
-      type: 'bookmark',
-      bookmark: { url: folderUrl },
-    });
-  } else {
-    for (const filePath of pngPaths) {
+  if (uploadedFileIds.length > 0) {
+    // 노션 이미지 블록으로 embed
+    for (const fileId of uploadedFileIds) {
       children.push({
         object: 'block',
-        type: 'bulleted_list_item',
-        bulleted_list_item: {
-          rich_text: [{ type: 'text', text: { content: filePath } }],
+        type: 'image',
+        image: {
+          type: 'file_upload',
+          file_upload: { id: fileId },
         },
       });
+    }
+  } else {
+    throw new Error(`노션 이미지 업로드 전부 실패 — PNG ${pngPaths.length}장 중 0장 성공. 파일 경로/API 키를 확인하세요.`);
+  }
+
+  // Drive 업로드 (백업용, 실패해도 무시)
+  let htmlFiles = [];
+  if (academyName && driveFolderId) {
+    try {
+      const { uploadPNGs, uploadHTMLs } = await import('./drive-uploader.js');
+      const uploadResult = await uploadPNGs(pngPaths, academyName, pageTitle, driveFolderId);
+      if (htmlSources && htmlSources.length > 0 && uploadResult.folderId) {
+        htmlFiles = await uploadHTMLs(htmlSources, uploadResult.folderId);
+      }
+    } catch (e) {
+      // Drive 백업 실패는 무시 — 노션 업로드가 메인
     }
   }
 
@@ -445,7 +529,7 @@ export async function appendFilePaths(pageId, pngPaths, pageTitle, academyName, 
   await withRetry(() => notion.blocks.children.append({ block_id: pageId, children }));
 
   // Figma 댓글 알림
-  if (driveFiles.length > 0 && figmaFileKey) {
+  if (htmlFiles.length > 0 && figmaFileKey) {
     try {
       const { notifyFigma } = await import('./figma-uploader.js');
       await notifyFigma({

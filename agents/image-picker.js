@@ -214,15 +214,71 @@ export async function pickImage(card, academyKey) {
 const CUTOUT_CATEGORIES = new Set(['선생님사진', '학생사진', '인물', '원장님사진', '상담사진']);
 
 /**
- * 전체 카드 이미지 매칭
+ * 파일명으로 Drive 전체 카테고리 폴더에서 이미지 검색
+ * @param {string} fileName - 검색할 파일명 (부분 매칭)
+ * @param {string} academyKey - 학원 키
+ * @returns {{ url: string, category: string } | null}
  */
-export async function pickAllImages(cards, academyKey) {
+export async function findImageByName(fileName, academyKey) {
+  const folders = await loadDriveFolders();
+  const academyFolders = folders[academyKey];
+  if (!academyFolders?.categories) return null;
+
+  const searchName = fileName.toLowerCase().replace(/\.(png|jpg|jpeg|webp)$/i, '');
+
+  for (const [category, folderId] of Object.entries(academyFolders.categories)) {
+    if (category === '레퍼런스') continue;
+
+    const images = await listImagesInFolder(folderId);
+    for (const file of images) {
+      const name = (file.name || '').toLowerCase().replace(/\.(png|jpg|jpeg|webp)$/i, '');
+      if (name === searchName || name.includes(searchName) || searchName.includes(name)) {
+        const url = `https://drive.google.com/uc?export=view&id=${file.id}`;
+        await recordUsedImage(academyKey, file.id, category);
+        return { url, category };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * 전체 카드 이미지 매칭
+ * @param {Object[]} cards - 카드 배열
+ * @param {string} academyKey - 학원 키
+ * @param {Map<number, string>} [assignments] - 수동 지정 (카드번호 → 파일명)
+ */
+export async function pickAllImages(cards, academyKey, assignments = new Map()) {
   console.log('  📸 이미지 매칭 시작...');
+  if (assignments.size > 0) {
+    console.log(`  📌 수동 지정: ${[...assignments.entries()].map(([k, v]) => `카드${k}→${v}`).join(', ')}`);
+  }
 
   let matchCount = 0;
   let skipCount = 0;
+  let manualCount = 0;
 
   for (const card of cards) {
+    // 수동 지정된 카드 처리
+    if (assignments.has(card.number)) {
+      const fileName = assignments.get(card.number);
+      const result = await findImageByName(fileName, academyKey);
+      if (result) {
+        if (CUTOUT_CATEGORIES.has(result.category)) {
+          card.image_url = result.url;
+        } else {
+          card.bg_image_url = result.url;
+        }
+        manualCount++;
+        console.log(`  📌 카드 ${String(card.number).padStart(2, '0')}: "${fileName}" → ${result.category} (수동 지정)`);
+        continue;
+      } else {
+        console.log(`  ⚠️ 카드 ${String(card.number).padStart(2, '0')}: "${fileName}" 찾을 수 없음 → 자동 매칭으로 전환`);
+      }
+    }
+
+    // 자동 매칭
     if (!card.image_category) {
       skipCount++;
       continue;
@@ -231,10 +287,8 @@ export async function pickAllImages(cards, academyKey) {
     const url = await pickImage(card, academyKey);
     if (url) {
       if (CUTOUT_CATEGORIES.has(card.image_category)) {
-        // 인물 카테고리 → image_url (bg-remover에서 누끼 처리)
         card.image_url = url;
       } else {
-        // 수업사진, 학원외관 등 → bg_image_url (영역 분리 레이아웃으로 직접 사용)
         card.bg_image_url = url;
       }
       matchCount++;
@@ -245,6 +299,6 @@ export async function pickAllImages(cards, academyKey) {
     }
   }
 
-  console.log(`  📸 이미지 매칭 완료: ${matchCount}장 매칭, ${skipCount}장 스킵`);
+  console.log(`  📸 이미지 매칭 완료: ${manualCount}장 수동, ${matchCount}장 자동, ${skipCount}장 스킵`);
   return cards;
 }
