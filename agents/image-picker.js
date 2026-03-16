@@ -21,7 +21,7 @@ export async function getClients() {
   const auth = new google.auth.GoogleAuth({
     credentials: key,
     scopes: [
-      'https://www.googleapis.com/auth/drive.readonly',
+      'https://www.googleapis.com/auth/drive',
       'https://www.googleapis.com/auth/spreadsheets',
     ],
   });

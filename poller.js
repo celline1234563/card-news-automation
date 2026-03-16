@@ -11,6 +11,7 @@ import { runBlog } from './agents/blog-runner.js';
 import { parseCardsFromContent } from './agents/card-parser.js';
 import { sendDailyReport } from './agents/daily-reporter.js';
 import { syncAllReferences } from './agents/reference-syncer.js';
+import { classifyAll } from './agents/image-classifier.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -58,6 +59,8 @@ async function handlePlanRequests() {
         keyword: page.keyword,
         comments: comments.map(c => c.text),
         pageContent: pageContent.planningContent,
+        academyKey: page.academyKey,
+        contentTypes: page.contentTypes,
       });
       await log(`  ✅ 카드 ${copyData.cards.length}장 기획 완료`);
 
@@ -158,6 +161,8 @@ async function handleDesignRevisions() {
       const copyData = await research(topic, academy.name, {
         keyword: page.keyword,
         revisionInstructions: instructions,
+        academyKey: page.academyKey,
+        contentTypes: page.contentTypes,
       });
 
       // diff 댓글 기록
@@ -222,6 +227,13 @@ async function poll() {
 
   isProcessing = true;
   try {
+    // 이미지 자동 분류 (루트 폴더 → 카테고리 폴더)
+    try {
+      await classifyAll();
+    } catch (e) {
+      await log(`⚠️ 이미지 분류 실패 (계속 진행): ${e.message}`);
+    }
+
     await handlePlanRequests();
     await handleDesignRequests();
     await handleDesignRevisions();
