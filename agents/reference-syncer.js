@@ -105,27 +105,60 @@ export async function syncAllReferences() {
 
 /**
  * 특정 학원·카드타입에 매칭되는 레퍼런스 이미지 1장 반환
- * @param {string} academyKey - 학원 키 (ollinone, jinhak, toktok)
- * @param {string} cardType - 카드 타입 (hook, problem, data, insight, solution, example, summary, cta)
+ *
+ * 매칭 우선순위:
+ *   1) "{cardType}-" prefix 매칭 (hook-01.png)
+ *   2) 파일명에 cardType 키워드 포함 (썸네일_hook.png, 후킹카드.png 등)
+ *   3) 폴더 내 아무 이미지 (파일명 규칙 없어도 레퍼런스로 활용)
+ *
+ * @param {string} academyKey - 학원 키
+ * @param {string} cardType - 카드 타입
  * @returns {{ base64: string, mimeType: string } | null}
  */
 export async function findReference(academyKey, cardType) {
   const dir = join(REFS_DIR, academyKey);
 
+  // 카드 타입별 한글 키워드 매핑 (파일명에 한글로 적혀있을 경우 대비)
+  const typeKeywords = {
+    hook: ['hook', '후킹', '썸네일', '표지', '인트로', 'cover', 'thumbnail'],
+    problem: ['problem', '문제', '공감', 'empathy'],
+    data: ['data', '데이터', '통계', 'stat'],
+    insight: ['insight', '인사이트', '원인'],
+    solution: ['solution', '솔루션', '해결', '방법'],
+    example: ['example', '사례', '비교', 'compare'],
+    summary: ['summary', '요약', '정리'],
+    cta: ['cta', '상담', '문의', '연락'],
+  };
+
   try {
     const entries = await readdir(dir);
-    // hook-01.png, hook-02.png 형식 매칭
-    const matches = entries
-      .filter(name => name.startsWith(`${cardType}-`) && /\.(png|jpg|jpeg|webp)$/i.test(name))
+    const images = entries
+      .filter(name => /\.(png|jpg|jpeg|webp)$/i.test(name))
       .sort();
 
-    if (matches.length === 0) return null;
+    if (images.length === 0) return null;
 
-    const fileName = matches[0];
-    const buffer = await readFile(join(dir, fileName));
+    // 1순위: "{cardType}-" prefix 정확 매칭
+    let match = images.find(name => name.toLowerCase().startsWith(`${cardType}-`));
+
+    // 2순위: 파일명에 타입 관련 키워드 포함
+    if (!match) {
+      const keywords = typeKeywords[cardType] || [cardType];
+      match = images.find(name => {
+        const lower = name.toLowerCase();
+        return keywords.some(kw => lower.includes(kw));
+      });
+    }
+
+    // 3순위: 아무 이미지나 사용 (랜덤)
+    if (!match) {
+      match = images[Math.floor(Math.random() * images.length)];
+    }
+
+    const buffer = await readFile(join(dir, match));
     const base64 = buffer.toString('base64');
 
-    const ext = fileName.split('.').pop().toLowerCase();
+    const ext = match.split('.').pop().toLowerCase();
     const mimeMap = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' };
 
     return { base64, mimeType: mimeMap[ext] || 'image/png' };

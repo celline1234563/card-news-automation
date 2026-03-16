@@ -13,6 +13,7 @@ import { renderCards } from './agents/renderer.js';
 import { harmonizeAndDesign } from './agents/series-harmonizer.js';
 import { qaAndRegenerate } from './agents/visual-qa.js';
 import { pickAllImages } from './agents/image-picker.js';
+import { syncAllReferences } from './agents/reference-syncer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -60,9 +61,14 @@ export async function runPipeline(topic, academyId, options = {}) {
   console.log(`  학원: ${academyId}`);
   console.log('');
 
-  // ── Stage 0: 설정 로드 ──
-  console.log('▶ Stage 0: 학원 설정 로드');
+  // ── Stage 0: 설정 로드 + 레퍼런스 동기화 ──
+  console.log('▶ Stage 0: 학원 설정 로드 + 레퍼런스 동기화');
   const { academy, cssVariables } = await loadConfig(academyId);
+  try {
+    await syncAllReferences();
+  } catch (err) {
+    console.log(`  ⚠️ 레퍼런스 동기화 스킵: ${err.message}`);
+  }
   console.log(`  ✅ ${academy.name} 설정 로드 완료\n`);
 
   let copyData = options.copyData || null;
