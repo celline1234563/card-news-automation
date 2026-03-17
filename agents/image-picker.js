@@ -214,6 +214,34 @@ export async function pickImage(card, academyKey) {
 const CUTOUT_CATEGORIES = new Set(['선생님사진', '학생사진', '인물', '원장님사진', '상담사진']);
 
 /**
+ * 카드 타입 기반 image_category 자동 할당
+ * researcher가 image_category를 null로 남긴 카드에 기본값 부여
+ */
+const TYPE_DEFAULT_CATEGORY = {
+  problem: '학생사진',
+  empathy: '학생사진',
+  example: '수업사진',
+  solution: '수업사진',
+  cta: '학원외관',
+};
+
+function autoAssignCategory(cards, academyKey) {
+  let assigned = 0;
+  for (const card of cards) {
+    if (card.image_category) continue;
+    const defaultCat = TYPE_DEFAULT_CATEGORY[card.type];
+    if (defaultCat) {
+      card.image_category = defaultCat;
+      card._auto_assigned_category = true;
+      assigned++;
+    }
+  }
+  if (assigned > 0) {
+    console.log(`  📸 image_category 자동 할당: ${assigned}장`);
+  }
+}
+
+/**
  * 파일명으로 Drive 전체 카테고리 폴더에서 이미지 검색
  * @param {string} fileName - 검색할 파일명 (부분 매칭)
  * @param {string} academyKey - 학원 키
@@ -255,6 +283,9 @@ export async function pickAllImages(cards, academyKey, assignments = new Map()) 
     console.log(`  📌 수동 지정: ${[...assignments.entries()].map(([k, v]) => `카드${k}→${v}`).join(', ')}`);
   }
 
+  // image_category가 비어있는 카드에 타입 기반 기본값 자동 할당
+  autoAssignCategory(cards, academyKey);
+
   let matchCount = 0;
   let skipCount = 0;
   let manualCount = 0;
@@ -294,8 +325,13 @@ export async function pickAllImages(cards, academyKey, assignments = new Map()) 
       matchCount++;
       console.log(`  ✅ 카드 ${String(card.number).padStart(2, '0')}: ${card.image_category} → 매칭 완료 (${CUTOUT_CATEGORIES.has(card.image_category) ? '누끼용' : '배경용'})`);
     } else {
+      // 자동 할당된 카테고리인데 매칭 실패 → 원복 (Imagen에서 불필요한 생성 방지)
+      if (card._auto_assigned_category) {
+        card.image_category = null;
+        delete card._auto_assigned_category;
+      }
       skipCount++;
-      console.log(`  ⏭ 카드 ${String(card.number).padStart(2, '0')}: ${card.image_category} → 이미지 없음 (스킵)`);
+      console.log(`  ⏭ 카드 ${String(card.number).padStart(2, '0')}: ${card.image_category || '자동할당 실패'} → 이미지 없음 (스킵)`);
     }
   }
 

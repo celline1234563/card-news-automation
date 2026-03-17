@@ -67,7 +67,15 @@ async function rewriteCard(card, feedback, academyConfig) {
     max_tokens: 3000,
     system: `당신은 한국 학원 마케팅 카드뉴스 카피라이터입니다.
 주어진 피드백을 반영하여 카드를 재작성해주세요.
-원래 카드의 type, number, emphasis_style은 유지하세요.
+
+★ 원문 보존 원칙 (최우선):
+- headline, subtext의 핵심 메시지와 톤을 유지하세요.
+- 글자 수, 줄바꿈 구조를 최대한 보존하세요.
+- <em> 태그 위치와 강조 단어를 바꾸지 마세요.
+- 흐름/구조 피드백만 반영하고, 표현을 통째로 바꾸지 마세요.
+- stat, stat_label, items, steps 등 데이터 필드는 절대 변경 금지.
+- 원래 카드의 type, number, emphasis_style, icon, image_category, deco_icons는 유지하세요.
+
 반드시 JSON만 반환하세요.`,
     messages: [{
       role: 'user',
