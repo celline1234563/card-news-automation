@@ -177,7 +177,7 @@ async function main() {
       // 렌더링
       const page = await browser.newPage();
       await page.setViewport({ width: 1080, height: 1350 });
-      await page.setContent(html, { waitUntil: 'networkidle0' });
+      await page.setContent(html, { waitUntil: 'load', timeout: 120000 });
       await page.evaluate(() => document.fonts.ready);
 
       const filename = `card-${String(card.number).padStart(2, '0')}.png`;
