@@ -8,7 +8,7 @@
       "background": "#F8F8FF",
       "text": "#1A1A2E",
       "highlight": "#FFE030",
-      "accent": "#202487"
+      "accent": "#FFE030"
     },
     "mood": ["스마트한", "심플한", "진중한"],
     "grade": ["중학생", "고등학생"],
@@ -18,6 +18,7 @@
     "target_high": ["수내고","서현고","분당중앙고","늘푸른고","한솔고","분당고","영덕여고","대진고","운중고","야탑고"],
     "font": "Noto Sans KR",
     "logo_url": "",
+    "logo_file_id": "1LfgevYn12v5d6XVStIOoA3GlfoccJ_N6",
     "drive_folder_id": "1_y0kHsO1FiFOg61Oq-NLrkj3FnupqmTi"
   },
   "jinhak": {
@@ -39,6 +40,7 @@
     "target_middle": ["시흥중","문일중","동일중","한울중","가산중","난우중"],
     "font": "Noto Sans KR",
     "logo_url": "",
+    "logo_file_id": "1_M_yYnltTz0ou8NO-7ArCfHKi_AB25zn",
     "drive_folder_id": "10hHvBunFPOsrLltCosGoE7EhUOZn8ZtE"
   },
   "toktok": {
@@ -58,6 +60,7 @@
     "speciality": ["국제학교", "특목고", "화상영어", "미국교과서"],
     "font": "Noto Sans KR",
     "logo_url": "",
+    "logo_file_id": "1XseW4Iah01f3zh7DcL7x4yqOcwzWnwft",
     "drive_folder_id": "1KfPqQnedp4lmln69UGtPfbLkL3iqlAu5"
   }
 }

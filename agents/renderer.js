@@ -1,6 +1,74 @@
 import puppeteer from 'puppeteer';
 import { mkdir, writeFile, readFile } from 'fs/promises';
-import { join } from 'path';
+import { existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+/**
+ * 학원 로고를 base64 data URI로 로드
+ */
+async function loadLogoDataUri(academyKey) {
+  const logoPath = join(__dirname, '..', 'config', 'logos', `${academyKey}.png`);
+  if (!existsSync(logoPath)) return null;
+  const buf = await readFile(logoPath);
+  return `data:image/png;base64,${buf.toString('base64')}`;
+}
+
+/**
+ * HTML에 로고 오버레이를 주입 (</body> 앞에 삽입)
+ */
+function injectLogo(html, logoDataUri, academyName) {
+  if (!logoDataUri) return html;
+
+  const logoImg = `<img src="${logoDataUri}" style="height:40px; object-fit:contain; display:block;" />`;
+  let replaced = false;
+
+  if (academyName) {
+    // 1) brand 관련 클래스가 있는 태그: 텍스트를 로고로 교체 (원래 위치 유지)
+    const brandClassRe = /(<(?:div|span|footer|p|section)[^>]*class="[^"]*(?:brand-bar|brand-name|brand-info|brand-label|academy)[^"]*"[^>]*>)[\s\S]*?(<\/(?:div|span|footer|p|section)>)/gi;
+    if (brandClassRe.test(html)) {
+      replaced = true;
+      html = html.replace(brandClassRe, `$1${logoImg}$2`);
+      // brand 클래스 스타일에서 배경색/폰트 제거하고 로고에 맞게 조정
+      html = html.replace(/(\.(?:brand-bar|brand-name|brand-info|brand-label|academy)\s*\{)([^}]*)\}/gi, (m, prefix, body) => {
+        // 배경색/텍스트 관련 속성 제거, 패딩/정렬만 유지
+        const cleaned = body
+          .replace(/background-color\s*:[^;]+;?/gi, '')
+          .replace(/background\s*:[^;]+;?/gi, '')
+          .replace(/color\s*:[^;]+;?/gi, '')
+          .replace(/font-size\s*:[^;]+;?/gi, '')
+          .replace(/font-weight\s*:[^;]+;?/gi, '')
+          .replace(/letter-spacing\s*:[^;]+;?/gi, '');
+        return `${prefix}${cleaned} display:flex; align-items:center; justify-content:center;}`;
+      });
+    }
+
+    // 2) brand 클래스 없이 학원명 텍스트만 있는 태그: 로고로 교체
+    const nameOnlyRe = new RegExp(`(<(?:span|div|footer|p|section)[^>]*>)\\s*${academyName}\\s*(<\\/(?:span|div|footer|p|section)>)`, 'gs');
+    if (!replaced && nameOnlyRe.test(html)) {
+      replaced = true;
+      html = html.replace(nameOnlyRe, `$1${logoImg}$2`);
+    } else if (replaced) {
+      // brand 클래스로 이미 교체했으면, 나머지 중복 텍스트는 제거
+      html = html.replace(new RegExp(`<(?:span|div|footer|p|section)[^>]*>\\s*${academyName}\\s*</(?:span|div|footer|p|section)>`, 'gs'), '');
+    }
+
+    // 3) "학원명 | N/10" 패턴은 제거 (번호 표시 불필요)
+    html = html.replace(new RegExp(`<(?:span|div|footer|p|section)[^>]*>[^<]*${academyName}[^<]*\\|[^<]*</(?:span|div|footer|p|section)>`, 'gs'), '');
+  }
+
+  // 4) 중앙 하단 로고 워터마크 (투명도 40%) — 항상 삽입
+  const watermarkHtml = `
+<div style="position:fixed; bottom:32px; left:50%; transform:translateX(-50%); z-index:9999; pointer-events:none; opacity:0.4;">
+  <img src="${logoDataUri}" style="height:80px; object-fit:contain;" />
+</div>`;
+  html = html.replace('</body>', watermarkHtml + '\n</body>');
+
+  return html;
+}
 
 /**
  * emphasis_style에 맞게 <em> 태그에 클래스 추가
@@ -188,8 +256,14 @@ em.underline {
 /**
  * Puppeteer로 카드 HTML → PNG 렌더링
  */
-export async function renderCards(cards, cssVariables, academyName, outputDir) {
+export async function renderCards(cards, cssVariables, academyName, outputDir, academyKey) {
   await mkdir(outputDir, { recursive: true });
+
+  // 로고 로드
+  const logoDataUri = academyKey ? await loadLogoDataUri(academyKey) : null;
+  if (logoDataUri) {
+    console.log(`  🏷️  ${academyName} 로고 로드 완료`);
+  }
 
   console.log('  🖨️  Puppeteer 브라우저 시작...');
   const browser = await puppeteer.launch({
@@ -225,6 +299,15 @@ export async function renderCards(cards, cssVariables, academyName, outputDir) {
           console.log(`  ⚠️  카드 ${String(card.number).padStart(2, '0')}: 배경 이미지 로드 실패 (${err.message}), 무시`);
         }
       }
+
+      // {{ACADEMY_NAME}} 등 남은 플레이스홀더 치환
+      html = html.replaceAll('{{ACADEMY_NAME}}', academyName);
+      html = html.replaceAll('{{academy_name}}', academyName);
+      html = html.replaceAll('{<<ACADEMY_NAME}', academyName);
+      html = html.replaceAll('<<ACADEMY_NAME>>', academyName);
+
+      // 로고 주입 (기존 학원명 텍스트 제거 + 로고 삽입)
+      html = injectLogo(html, logoDataUri, academyName);
 
       htmlSources.push(html);
 

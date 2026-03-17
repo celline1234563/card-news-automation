@@ -20,25 +20,28 @@ const TYPE_TEMPLATE_MAP = {
 
 /**
  * 특수 조건 우선순위 체크 — 데이터 기반으로 최적 템플릿 결정
+ * @returns {{ name: string, forced: boolean } | null}
+ *   forced=true: 데이터 형식상 이 템플릿만 가능 (중복 허용)
+ *   forced=false: 선호하지만 대체 가능
  */
 function getSpecialOverride(card) {
-  // stat이 있으면 stat 템플릿 우선
-  if (card.stat) return 'basic-stat';
+  // stat이 있으면 stat 템플릿 강제
+  if (card.stat) return { name: 'basic-stat', forced: true };
   // before/after 데이터가 있으면 compare 강제
-  if (card.before_items || card.after_items || card.before_title) return 'basic-compare';
-  // quote 데이터가 있으면 speech 우선
-  if (card.quote_main) return 'basic-speech';
+  if (card.before_items || card.after_items || card.before_title) return { name: 'basic-compare', forced: true };
+  // quote 데이터가 있으면 speech 강제
+  if (card.quote_main) return { name: 'basic-speech', forced: true };
   // cta 데이터가 있으면 cta 강제
-  if (card.cta_text) return 'basic-cta';
-  // steps 배열이 있으면 step-number 우선
-  if (card.steps && Array.isArray(card.steps) && card.steps.length > 0) return 'basic-step-number';
-  // items 배열 체크 — 객체(icon/title/desc)면 info, 문자열이면 list
+  if (card.cta_text) return { name: 'basic-cta', forced: true };
+  // steps 배열이 있으면 step-number 강제
+  if (card.steps && Array.isArray(card.steps) && card.steps.length > 0) return { name: 'basic-step-number', forced: true };
+  // items 배열 체크 — 객체(icon/title/desc)면 info 강제, 문자열이면 list 강제
   if (card.items && Array.isArray(card.items) && card.items.length > 0) {
-    if (typeof card.items[0] === 'object') return 'basic-info';
-    return 'basic-list';
+    if (typeof card.items[0] === 'object') return { name: 'basic-info', forced: true };
+    return { name: 'basic-list', forced: true };
   }
-  // bg_image_url이 있고 hook이면 photo 우선
-  if (card.bg_image_url && card.type === 'hook') return 'cover-photo';
+  // bg_image_url이 있고 hook이면 photo 선호 (대체 가능)
+  if (card.bg_image_url && card.type === 'hook') return { name: 'cover-photo', forced: false };
   return null;
 }
 
@@ -54,15 +57,27 @@ export async function select(card, academyConfig, usedTemplates = []) {
   const type = card.type || 'info';
   const candidates = TYPE_TEMPLATE_MAP[type] || TYPE_TEMPLATE_MAP.info;
 
+  // 0. 비교 데이터 자동 파싱 (템플릿 선택 전에 실행)
+  if (!card.before_items && !card.after_items && (card.layout_hint === 'compare' || card.layout_hint === 'two-column')) {
+    parseCompareFromText(card);
+  }
+
   // 1. 특수 조건 체크
   const override = getSpecialOverride(card);
 
   // 2. 템플릿 선택
   let templateName = null;
 
-  if (override && !usedTemplates.includes(override)) {
-    templateName = override;
-  } else {
+  if (override) {
+    if (override.forced) {
+      // 데이터 형식 강제 — 중복이어도 이 템플릿 사용
+      templateName = override.name;
+    } else if (!usedTemplates.includes(override.name)) {
+      templateName = override.name;
+    }
+  }
+
+  if (!templateName) {
     // 후보군에서 사용하지 않은 첫 번째 선택
     for (const candidate of candidates) {
       if (!usedTemplates.includes(candidate)) {
@@ -72,9 +87,9 @@ export async function select(card, academyConfig, usedTemplates = []) {
     }
   }
 
-  // 3. 모든 후보가 사용됐으면 가장 적게 쓰인 후보 선택 (중복 허용)
+  // 3. 모든 후보가 사용됐으면 첫 번째 후보 사용 (중복 허용)
   if (!templateName) {
-    templateName = override || candidates[0];
+    templateName = (override && override.name) || candidates[0];
   }
 
   // 4. 템플릿 로드
@@ -89,6 +104,33 @@ export async function select(card, academyConfig, usedTemplates = []) {
   console.log(`  카드 ${String(card.number).padStart(2, '0')}: ${templateName} 템플릿 적용`);
 
   return { html, templateUsed: templateName };
+}
+
+/**
+ * subtext에 비교 데이터가 텍스트로 포함된 경우 구조화
+ * 예: "일반 학원:\n❌ 항목1\n올인원:\n✅ 항목2"
+ */
+function parseCompareFromText(card) {
+  const text = card.subtext || card.body || '';
+  // 비교 패턴 감지: "A:\n항목\nB:\n항목" 형식
+  const comparePattern = /(.+?):\s*\n([\s\S]*?)\n\n?(.+?):\s*\n([\s\S]*?)$/;
+  const match = text.match(comparePattern);
+  if (!match) return;
+
+  const [, title1, items1, title2, items2] = match;
+  const parseItems = (str) => str.split('\n').filter(l => l.trim()).map(l => l.replace(/^[❌✅⊗◉●○✓✗☑☐►▸]\s*/, '').trim()).filter(Boolean).join('<br>');
+
+  card.before_title = title1.trim();
+  card.before_items = parseItems(items1);
+  card.after_title = title2.trim();
+  card.after_items = parseItems(items2);
+  // subtext를 헤드라인 아래 설명으로 사용할 첫 줄 추출
+  const firstLine = text.split('\n')[0];
+  if (firstLine && !firstLine.includes(':')) {
+    card.subtext = firstLine;
+  } else {
+    card.subtext = '';
+  }
 }
 
 /**

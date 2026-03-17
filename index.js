@@ -141,7 +141,7 @@ export async function runPipeline(topic, academyId, options = {}) {
 
   console.log(`▶ Stage 6: PNG 렌더링`);
   console.log(`  출력 폴더: ${outputDir}`);
-  const { htmlSources } = await renderCards(copyData.cards, cssVariables, academy.name, outputDir);
+  const { htmlSources } = await renderCards(copyData.cards, cssVariables, academy.name, outputDir, academyId);
 
   // PNG 경로 목록 생성
   const pngPaths = copyData.cards.map((_, i) =>
@@ -158,7 +158,7 @@ export async function runPipeline(topic, academyId, options = {}) {
     const regenerated = copyData.cards.filter(c => c._regenerated);
     if (regenerated.length > 0) {
       console.log(`  🔄 ${regenerated.length}장 재렌더링...`);
-      await renderCards(copyData.cards, cssVariables, academy.name, outputDir);
+      await renderCards(copyData.cards, cssVariables, academy.name, outputDir, academyId);
       regenerated.forEach(c => delete c._regenerated);
     }
   } catch (err) {

@@ -22,42 +22,47 @@ body {
   background: var(--color-background); color: var(--color-text);
 }
 .card {
-  width: 1080px; height: 1350px; padding: 50px 56px; position: relative;
-  display: flex; flex-direction: column;
+  width: 1080px; height: 1350px; padding: 60px 72px 40px; position: relative;
+  display: flex; flex-direction: column; justify-content: flex-start;
+  padding-top: 80px;
 }
 .card-num {
   position: absolute; top: 24px; right: 50px;
   font-size: 16px; font-weight: 700; color: var(--color-primary); opacity: 0.5;
 }
 .headline {
-  font-size: 44px; font-weight: 900;
-  color: var(--color-text); margin-bottom: 24px;
+  font-size: 46px; font-weight: 900;
+  color: var(--color-text); margin-bottom: 12px;
+}
+.headline-sub {
+  font-size: 24px; font-weight: 400;
+  color: var(--color-text); opacity: 0.6;
+  margin-bottom: 36px;
 }
 .grid {
   display: grid; grid-template-columns: 1fr 1fr;
-  gap: 20px; flex: 1; align-content: center;
+  gap: 24px; flex: 1; align-content: center;
 }
 .box {
   background: var(--color-white);
   border-radius: 20px;
   padding: 44px 36px;
-  border-top: 5px solid var(--color-primary);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border-left: 5px solid var(--color-primary);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
   display: flex; flex-direction: column;
+  justify-content: center;
 }
 .box-icon {
-  width: 60px; height: 60px;
-  background: var(--color-primary); border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--color-white); font-size: 28px; font-weight: 900;
-  margin-bottom: 20px;
+  font-size: 40px; font-weight: 900;
+  color: var(--color-primary);
+  margin-bottom: 14px;
 }
 .box-title {
-  font-size: 28px; font-weight: 700;
+  font-size: 36px; font-weight: 900;
   margin-bottom: 10px; color: var(--color-text);
 }
 .box-desc {
-  font-size: 22px; color: var(--color-text);
+  font-size: 24px; color: var(--color-text);
   opacity: 0.6; line-height: 1.5;
 }
 .subtext {
@@ -73,6 +78,7 @@ em.underline { border-bottom: 6px solid var(--color-accent); font-style: normal;
 <div class="card">
   <span class="card-num">{{card_number}}</span>
   <h1 class="headline">{{headline}}</h1>
+  <p class="headline-sub">{{body}}</p>
   <div class="grid">
     <div class="box">
       <div class="box-icon">{{icon_1}}</div>

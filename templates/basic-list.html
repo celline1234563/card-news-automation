@@ -22,7 +22,7 @@ body {
   background: var(--color-background); color: var(--color-text);
 }
 .card {
-  width: 1080px; height: 1350px; padding: 50px 56px; position: relative;
+  width: 1080px; height: 1350px; padding: 60px 72px; position: relative;
   display: flex; flex-direction: column;
 }
 .top-bar {
@@ -35,27 +35,35 @@ body {
 }
 .headline {
   font-size: 46px; font-weight: 900;
-  margin-top: 24px; margin-bottom: 28px;
+  margin-top: 12px; margin-bottom: 20px;
   color: var(--color-text);
+}
+.sub-headline {
+  font-size: 24px; font-weight: 400;
+  color: var(--color-text); opacity: 0.6;
+  margin-bottom: 32px;
 }
 .list {
   display: flex; flex-direction: column;
   flex: 1; justify-content: space-evenly;
 }
 .list-item {
-  display: flex; align-items: center;
-  background: var(--color-white);
-  border-radius: 16px; padding: 36px 40px;
-  border-left: 5px solid var(--color-primary);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  display: flex; align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
 }
+.list-item:last-child { border-bottom: none; }
+.list-item:has(.item-text:empty) { display: none; }
 .check {
   width: 44px; height: 44px; min-width: 44px;
   background: var(--color-primary); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  margin-right: 24px; color: var(--color-white); font-size: 20px; font-weight: 900;
+  margin-right: 24px; margin-top: 6px; color: var(--color-white); font-size: 20px; font-weight: 900;
+  flex-shrink: 0;
 }
-.item-text { font-size: 30px; font-weight: 500; }
+.item-wrap { display: flex; flex-direction: column; }
+.item-title { font-size: 28px; font-weight: 700; color: var(--color-secondary); margin-bottom: 8px; }
+.item-text { font-size: 26px; font-weight: 400; line-height: 1.5; color: var(--color-text); opacity: 0.8; }
 .subtext {
   margin-top: auto; padding-top: 20px; font-size: 22px;
   color: var(--color-text); opacity: 0.5;
@@ -70,12 +78,13 @@ em.underline { border-bottom: 6px solid var(--color-accent); font-style: normal;
   <div class="top-bar"></div>
   <span class="card-num">{{card_number}}</span>
   <h1 class="headline">{{headline}}</h1>
+  <p class="sub-headline">{{body}}</p>
   <div class="list">
-    <div class="list-item"><span class="check">&#10003;</span><span class="item-text">{{item_1}}</span></div>
-    <div class="list-item"><span class="check">&#10003;</span><span class="item-text">{{item_2}}</span></div>
-    <div class="list-item"><span class="check">&#10003;</span><span class="item-text">{{item_3}}</span></div>
-    <div class="list-item"><span class="check">&#10003;</span><span class="item-text">{{item_4}}</span></div>
-    <div class="list-item"><span class="check">&#10003;</span><span class="item-text">{{item_5}}</span></div>
+    <div class="list-item"><span class="check">{{icon_1}}</span><div class="item-wrap"><span class="item-title">{{item_title_1}}</span><span class="item-text">{{item_1}}</span></div></div>
+    <div class="list-item"><span class="check">{{icon_2}}</span><div class="item-wrap"><span class="item-title">{{item_title_2}}</span><span class="item-text">{{item_2}}</span></div></div>
+    <div class="list-item"><span class="check">{{icon_3}}</span><div class="item-wrap"><span class="item-title">{{item_title_3}}</span><span class="item-text">{{item_3}}</span></div></div>
+    <div class="list-item"><span class="check">{{icon_4}}</span><div class="item-wrap"><span class="item-title">{{item_title_4}}</span><span class="item-text">{{item_4}}</span></div></div>
+    <div class="list-item"><span class="check">{{icon_5}}</span><div class="item-wrap"><span class="item-title">{{item_title_5}}</span><span class="item-text">{{item_5}}</span></div></div>
   </div>
   <p class="subtext">{{subtext}}</p>
 </div>

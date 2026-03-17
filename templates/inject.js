@@ -49,6 +49,7 @@ function injectPlaceholders(html, data) {
     'academy_name', 'card_number', 'tag',
     'quote_main', 'quote_sub', 'sender',
     'before_title', 'before_items', 'after_title', 'after_items',
+    'headline_sub',
   ];
 
   for (const field of fields) {
