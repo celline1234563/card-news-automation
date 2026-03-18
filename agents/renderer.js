@@ -155,9 +155,9 @@ body {
 }
 
 .headline {
-  font-size: 52px;
+  font-size: 64px;
   font-weight: 900;
-  line-height: 1.4;
+  line-height: 1.35;
   text-align: center;
   margin-bottom: 40px;
   word-break: keep-all;
@@ -165,9 +165,9 @@ body {
 }
 
 .subtext {
-  font-size: 28px;
+  font-size: 34px;
   font-weight: 400;
-  line-height: 1.6;
+  line-height: 1.5;
   text-align: center;
   color: var(--color-text);
   opacity: 0.75;
@@ -183,14 +183,14 @@ body {
 }
 
 .stat-number {
-  font-size: 120px;
+  font-size: 140px;
   font-weight: 900;
   color: var(--color-accent);
   line-height: 1.1;
 }
 
 .stat-label {
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 400;
   color: var(--color-text);
   opacity: 0.7;
@@ -231,9 +231,9 @@ em.underline {
   display: inline-block;
   background: var(--color-primary);
   color: white;
-  font-size: 24px;
+  font-size: 30px;
   font-weight: 700;
-  padding: 16px 48px;
+  padding: 20px 56px;
   border-radius: 50px;
   margin-top: 40px;
 }
@@ -315,7 +315,7 @@ export async function renderCards(cards, cssVariables, academyName, outputDir, a
       const page = await browser.newPage();
 
       await page.setViewport({ width: 1080, height: 1350 });
-      await page.setContent(html, { waitUntil: 'networkidle0' });
+      await page.setContent(html, { waitUntil: 'load', timeout: 120000 });
 
       // Google Fonts 로딩 대기
       await page.evaluate(() => document.fonts.ready);
