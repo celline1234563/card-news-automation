@@ -46,24 +46,33 @@ function injectLogo(html, logoDataUri, academyName) {
       });
     }
 
-    // 2) brand 클래스 없이 학원명 텍스트만 있는 태그: 로고로 교체
+    // 2) brand 클래스 없이 학원명 텍스트"만" 들어있는 태그: 로고로 교체
     const nameOnlyRe = new RegExp(`(<(?:span|div|footer|p|section)[^>]*>)\\s*${academyName}\\s*(<\\/(?:span|div|footer|p|section)>)`, 'gs');
     if (!replaced && nameOnlyRe.test(html)) {
       replaced = true;
       html = html.replace(nameOnlyRe, `$1${logoImg}$2`);
-    } else if (replaced) {
-      // brand 클래스로 이미 교체했으면, 나머지 중복 텍스트는 제거
+    } else {
+      // brand 클래스로 이미 교체했으면, 학원명"만" 들어있는 나머지 태그는 제거
       html = html.replace(new RegExp(`<(?:span|div|footer|p|section)[^>]*>\\s*${academyName}\\s*</(?:span|div|footer|p|section)>`, 'gs'), '');
     }
 
     // 3) "학원명 | N/10" 패턴은 제거 (번호 표시 불필요)
     html = html.replace(new RegExp(`<(?:span|div|footer|p|section)[^>]*>[^<]*${academyName}[^<]*\\|[^<]*</(?:span|div|footer|p|section)>`, 'gs'), '');
+
+    // 4) 로고 img 바로 옆에 남은 학원명 텍스트만 제거 (헤드라인 등 콘텐츠 텍스트는 보존)
+    html = html.replace(new RegExp(`(${logoImg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\s*${academyName}`, 'g'), '$1');
+    html = html.replace(new RegExp(`${academyName}\\s*(${logoImg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'g'), '$1');
   }
 
-  // 4) 중앙 하단 로고 워터마크 (투명도 40%) — 항상 삽입
+  // 5) 기존 brand/로고/footer 영역 모두 제거 (Gemini가 생성한 모든 로고/학원명 요소)
+  html = html.replace(/<(?:div|span|footer|p|section)[^>]*class="[^"]*(?:brand|logo|watermark|academy|footer)[^"]*"[^>]*>[\s\S]*?<\/(?:div|span|footer|p|section)>/gi, '');
+  // footer 태그 자체도 제거 (class 없이 <footer>로만 된 경우)
+  html = html.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '');
+
+  // 6) 중앙 하단 로고 워터마크 — 항상 1개만 삽입 (누끼 스타일)
   const watermarkHtml = `
-<div style="position:fixed; bottom:32px; left:50%; transform:translateX(-50%); z-index:9999; pointer-events:none; opacity:0.4;">
-  <img src="${logoDataUri}" style="height:80px; object-fit:contain;" />
+<div style="position:fixed; bottom:32px; left:50%; transform:translateX(-50%); z-index:9999; pointer-events:none;">
+  <img src="${logoDataUri}" style="height:60px; object-fit:contain; opacity:0.35;" />
 </div>`;
   html = html.replace('</body>', watermarkHtml + '\n</body>');
 

@@ -141,11 +141,14 @@ function checkSpacing(html, checklist) {
   const minPadding = checklist?.checks?.token_spacing?.min_padding || 40;
   const issues = [];
 
-  // padding 값 추출
+  // padding 값 추출 (em 태그 내부 padding은 제외)
   const padMatches = html.matchAll(/padding\s*:\s*(\d+)px/g);
   for (const m of padMatches) {
     const pad = parseInt(m[1]);
     if (pad < minPadding && pad > 0) {
+      // em 태그 CSS 블록 안의 padding은 하이라이트용이므로 제외 (500자 lookback)
+      const before = html.substring(Math.max(0, m.index - 500), m.index);
+      if (/\bem\b[^{]*\{[^}]*$/.test(before)) continue;
       issues.push({
         check: 'spacing',
         description: `padding ${pad}px가 최소 여백(${minPadding}px) 미만 — 여백이 부족하면 구린 디자인`,
@@ -240,6 +243,66 @@ function checkPatternCompliance(html, card) {
 }
 
 /**
+ * 로컬 체크: em 하이라이트 스타일 검증
+ * - padding이 과도하면 글자와 하이라이트가 분리됨
+ * - display: inline이 아니면 너비가 텍스트와 안 맞음
+ * - width가 명시되면 텍스트 길이와 안 맞음
+ */
+function checkEmHighlight(html) {
+  const issues = [];
+
+  // em 관련 CSS 블록 찾기 (em { ... }, .headline em { ... } 등)
+  const emRuleMatches = [...html.matchAll(/([^{}]*em)\s*\{([^}]+)\}/g)];
+  for (const m of emRuleMatches) {
+    const selector = m[1].trim();
+    const styles = m[2];
+
+    // em 셀렉터인지 확인 (em, .headline em, h1 em 등)
+    if (!/\bem\b/.test(selector)) continue;
+
+    // padding 과도 체크 (10px 이상이면 문제)
+    const paddingMatch = styles.match(/padding\s*:\s*(\d+)px/);
+    if (paddingMatch && parseInt(paddingMatch[1]) > 10) {
+      issues.push({
+        check: 'em_highlight',
+        description: `em 태그 padding ${paddingMatch[1]}px — 하이라이트 분리 버그 (2px 6px로 교정)`,
+        line_hint: m[0].substring(0, 60),
+      });
+    }
+
+    // display: block 체크
+    if (/display\s*:\s*block/.test(styles)) {
+      issues.push({
+        check: 'em_highlight',
+        description: 'em 태그 display: block — 하이라이트 너비가 전체로 확장됨 (inline으로 교정)',
+        line_hint: 'display: block',
+      });
+    }
+
+    // 명시적 width 체크
+    if (/\bwidth\s*:\s*\d+/.test(styles)) {
+      issues.push({
+        check: 'em_highlight',
+        description: 'em 태그에 명시적 width — 텍스트 길이와 안 맞음 (제거)',
+        line_hint: 'width on em',
+      });
+    }
+  }
+
+  // 별도 div/span으로 하이라이트 블록 흉내내기 감지
+  const fakeHighlight = html.match(/<(?:div|span)[^>]*style="[^"]*background[^"]*var\(--color-highlight\)[^"]*"[^>]*>\s*<\/(?:div|span)>/gi);
+  if (fakeHighlight) {
+    issues.push({
+      check: 'em_highlight',
+      description: '빈 div/span으로 하이라이트 블록 흉내 — 삭제 필요',
+      line_hint: fakeHighlight[0].substring(0, 60),
+    });
+  }
+
+  return issues.length > 0 ? issues : null;
+}
+
+/**
  * 로컬 체크: 폰트 로드 확인
  */
 function checkFontLoading(html) {
@@ -262,6 +325,67 @@ function checkFontLoading(html) {
   }
 
   return issues.length > 0 ? issues : null;
+}
+
+/**
+ * em 하이라이트 CSS 강제 교정 (항상 실행)
+ * - padding 과도 → 2px 6px
+ * - display: block → inline
+ * - 명시적 width 제거 → 텍스트 길이에 자동 맞춤
+ * - box-decoration-break 보장
+ */
+function fixEmHighlightAlways(html) {
+  let fixed = html;
+
+  // em 관련 CSS 룰 찾아서 교정
+  fixed = fixed.replace(/([\w\s.*#\->:,]+\bem\b[^{]*)\{([^}]+)\}/g, (match, selector, styles) => {
+    // em 셀렉터가 맞는지 확인
+    if (!/\bem\b/.test(selector)) return match;
+
+    let corrected = styles;
+
+    // padding 교정: 어떤 형태든 2px 6px으로 통일
+    corrected = corrected.replace(/padding\s*:[^;]+;?/g, 'padding: 2px 6px;');
+
+    // display 교정 → inline (block, inline-block 등 모두)
+    if (/display\s*:/.test(corrected)) {
+      corrected = corrected.replace(/display\s*:[^;]+;?/g, 'display: inline;');
+    } else {
+      corrected += '\n      display: inline;';
+    }
+
+    // 명시적 width/max-width 제거
+    corrected = corrected.replace(/\b(max-)?width\s*:[^;]+;?\s*/g, '');
+
+    // box-decoration-break 보장 (줄바꿈 시 하이라이트 유지)
+    if (!corrected.includes('box-decoration-break')) {
+      corrected += '\n      box-decoration-break: clone;\n      -webkit-box-decoration-break: clone;';
+    }
+
+    return `${selector}{${corrected}}`;
+  });
+
+  // 빈 하이라이트 div/span 블록 제거
+  fixed = fixed.replace(/<(?:div|span)[^>]*style="[^"]*background[^"]*(?:highlight|#FFE030|#fff3c8|yellow)[^"]*"[^>]*>\s*<\/(?:div|span)>/gi, '');
+
+  // 다크 배경에서 em 하이라이트 텍스트 색상 → 흰색 강제
+  // body 배경이 다크(primary, text, 짙은 색)이면 em color를 #FFFFFF로
+  const isDark = /body\s*\{[^}]*background[^}]*(?:var\(--color-primary\)|var\(--color-text\)|#[0-3][0-9a-fA-F]{5}|#[0-2][0-9a-fA-F]{2})/s.test(fixed);
+  if (isDark) {
+    fixed = fixed.replace(/([\w\s.*#\->:,]*\bem\b[^{]*)\{([^}]+)\}/g, (match, selector, styles) => {
+      if (!/\bem\b/.test(selector)) return match;
+      // color 속성을 흰색으로 교체 또는 추가
+      let corrected = styles;
+      if (/color\s*:/.test(corrected)) {
+        corrected = corrected.replace(/color\s*:[^;]+;?/g, 'color: #FFFFFF;');
+      } else {
+        corrected += '\n      color: #FFFFFF;';
+      }
+      return `${selector}{${corrected}}`;
+    });
+  }
+
+  return fixed;
 }
 
 /**
@@ -288,11 +412,38 @@ function autoFix(html, issues) {
         break;
 
       case 'spacing':
-        // padding이 너무 작은 것은 수치만 교체
-        fixed = fixed.replace(/padding\s*:\s*([12]\d?)px/g, (match, p) => {
+        // padding이 너무 작은 것은 수치만 교체 (em 블록 제외)
+        fixed = fixed.replace(/padding\s*:\s*([12]\d?)px/g, (match, p, offset) => {
           const val = parseInt(p);
+          // em 태그 CSS 블록 안이면 건드리지 않음 (500자 lookback)
+          const before = fixed.substring(Math.max(0, offset - 500), offset);
+          if (/\bem\b[^{]*\{[^}]*$/.test(before)) return match;
+          // padding: 2px 6px는 em 하이라이트 표준값이므로 건드리지 않음
+          const afterStr = fixed.substring(offset, offset + 30);
+          if (/padding\s*:\s*2px\s+6px/.test(match + afterStr)) return match;
           return val < 40 ? `padding: 60px` : match;
         });
+        break;
+
+      case 'em_highlight':
+        // em 태그 CSS 강제 교정: padding, display, width
+        fixed = fixed.replace(/([^{}]*\bem\b[^{]*)\{([^}]+)\}/g, (match, selector, styles) => {
+          if (!/\bem\b/.test(selector)) return match;
+          let corrected = styles;
+          // padding 교정 (10px 초과 → 2px 6px)
+          corrected = corrected.replace(/padding\s*:\s*\d+px[^;]*/g, 'padding: 2px 6px');
+          // display 교정 → inline
+          corrected = corrected.replace(/display\s*:\s*block/g, 'display: inline');
+          // 명시적 width 제거
+          corrected = corrected.replace(/\bwidth\s*:\s*\d+[^;]*;?\s*/g, '');
+          // box-decoration-break 보장
+          if (!corrected.includes('box-decoration-break')) {
+            corrected += '\n      box-decoration-break: clone;\n      -webkit-box-decoration-break: clone;';
+          }
+          return `${selector}{${corrected}}`;
+        });
+        // 빈 하이라이트 div/span 제거
+        fixed = fixed.replace(/<(?:div|span)[^>]*style="[^"]*background[^"]*var\(--color-highlight\)[^"]*"[^>]*>\s*<\/(?:div|span)>/gi, '');
         break;
     }
   }
@@ -335,9 +486,16 @@ export async function validateCard(html, card) {
   const fontIssues = checkFontLoading(html);
   if (fontIssues) allIssues.push(...fontIssues);
 
+  // 7. em 하이라이트 스타일
+  const emIssues = checkEmHighlight(html);
+  if (emIssues) allIssues.push(...emIssues);
+
+  // ★ em 하이라이트 교정은 항상 무조건 실행 (검증 결과와 무관)
+  let workingHtml = fixEmHighlightAlways(html);
+
   // === Claude API 체크 (3줄 테스트, 텍스트 오버플로, 전체 품질) ===
   try {
-    const result = await validateHTML(html, card);
+    const result = await validateHTML(workingHtml, card);
 
     if (result.issues) {
       allIssues.push(...result.issues);
@@ -354,10 +512,10 @@ export async function validateCard(html, card) {
     const lineCountFails = allIssues.filter(i => i.check === 'text_line_count').length;
 
     if (!hasFail && lineCountFails < 2 && result.pass) {
-      return { pass: true, feedback: '', html, issues: allIssues };
+      return { pass: true, feedback: '', html: workingHtml, issues: allIssues };
     }
 
-    const fixedHtml = autoFix(html, allIssues);
+    const fixedHtml = autoFix(workingHtml, allIssues);
     return {
       pass: false,
       feedback: result.feedback || allIssues.map(i => i.description).join('; '),
@@ -376,7 +534,7 @@ export async function validateCard(html, card) {
       feedback: allIssues.length > 0
         ? allIssues.map(i => i.description).join('; ')
         : `검증 스킵: ${err.message}`,
-      html: allIssues.length > 0 ? autoFix(html, allIssues) : html,
+      html: allIssues.length > 0 ? autoFix(workingHtml, allIssues) : workingHtml,
       issues: allIssues,
     };
   }
