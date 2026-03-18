@@ -23,11 +23,13 @@
 2. 이미지 위 텍스트 오버레이 절대 금지 — 영역 분리
 3. 컬러 2가지만 (primary + background)
 4. 비주얼 포인트 1개만
-5. 사방 여백 30~40px, padding 30~40px
+5. 사방 여백 40~60px
 6. ★ 콘텐츠가 1080x1350 영역 밖으로 절대 넘치면 안 됨 — 넘칠 것 같으면 여백/폰트 축소
-7. line-height: 1.25~1.35 (1.4 이상 금지, 글 사이 간격 좁게)
-8. headline 56~80px, subtext 26~34px, 리스트 항목 28~36px (폰트 크게)
+7. line-height: 1.2~1.3 (1.4 이상 금지)
+8. ★★★ headline 80~120px (최소 72px), subtext 28~36px, 리스트 항목 32~40px — 글씨가 작으면 즉시 실패
 9. ★ 이모지(유니코드) 절대 금지 — Lucide 아이콘만 사용 (<i data-lucide="아이콘명"></i>)
 10. ★ Lucide CDN(<script src="https://unpkg.com/lucide@latest"></script>) + lucide.createIcons() 반드시 포함
+11. ★★★ 화면을 꽉 채워라 — 빈 공간이 전체의 30% 넘으면 실패. 폰트를 키우거나 장식 요소를 추가하라
+12. ★★★ 하단 브랜드 바 (학원명) 반드시 포함 — 높이 80~120px, 하단 고정
 
 ```html 코드블록으로 완성된 HTML 파일을 반환하세요.

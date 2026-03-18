@@ -104,21 +104,49 @@ export async function syncAllReferences() {
 }
 
 /**
- * 특정 학원·카드타입에 매칭되는 레퍼런스 이미지 1장 반환
+ * 이미지 파일을 base64로 로드
+ */
+async function loadImageAsRef(filePath) {
+  const buffer = await readFile(filePath);
+  const base64 = buffer.toString('base64');
+  const ext = filePath.split('.').pop().toLowerCase();
+  const mimeMap = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' };
+  return { base64, mimeType: mimeMap[ext] || 'image/png' };
+}
+
+/**
+ * 학원 prefix → 번호 매칭 파일 찾기 (올인원1.png, 진학3.png 등)
+ */
+function findNumberedRef(images, academyKey, cardNumber) {
+  // 학원명 한글 매핑
+  const prefixMap = {
+    ollinone: '올인원',
+    jinhak: '진학',
+    toktok: '톡톡',
+  };
+  const prefix = prefixMap[academyKey];
+  if (!prefix) return null;
+  return images.find(name => name === `${prefix}${cardNumber}.png` || name === `${prefix}${cardNumber}.jpg`);
+}
+
+/**
+ * 특정 학원·카드에 매칭되는 레퍼런스 이미지 다중 반환
  *
  * 매칭 우선순위:
- *   1) "{cardType}-" prefix 매칭 (hook-01.png)
- *   2) 파일명에 cardType 키워드 포함 (썸네일_hook.png, 후킹카드.png 등)
- *   3) 폴더 내 아무 이미지 (파일명 규칙 없어도 레퍼런스로 활용)
+ *   1) 카드 번호 매칭 (올인원1.png → 카드1, 진학3.png → 카드3)
+ *   2) "{cardType}-" prefix 매칭 (hook-01.png)
+ *   3) 파일명에 cardType 키워드 포함
  *
  * @param {string} academyKey - 학원 키
  * @param {string} cardType - 카드 타입
- * @returns {{ base64: string, mimeType: string } | null}
+ * @param {number} [cardNumber] - 카드 번호 (1~10)
+ * @returns {{ base64: string, mimeType: string }[] } 레퍼런스 배열 (최대 3장)
  */
-export async function findReference(academyKey, cardType) {
-  const dir = join(REFS_DIR, academyKey);
+export async function findReferences(academyKey, cardType, cardNumber) {
+  const results = [];
+  const maxRefs = 3;
 
-  // 카드 타입별 한글 키워드 매핑 (파일명에 한글로 적혀있을 경우 대비)
+  // 카드 타입별 한글 키워드 매핑
   const typeKeywords = {
     hook: ['hook', '후킹', '썸네일', '표지', '인트로', 'cover', 'thumbnail'],
     problem: ['problem', '문제', '공감', 'empathy'],
@@ -130,39 +158,79 @@ export async function findReference(academyKey, cardType) {
     cta: ['cta', '상담', '문의', '연락'],
   };
 
-  try {
-    const entries = await readdir(dir);
-    const images = entries
-      .filter(name => /\.(png|jpg|jpeg|webp)$/i.test(name))
-      .sort();
+  const allAcademies = ['ollinone', 'jinhak', 'toktok'];
+  const usedFiles = new Set();
 
-    if (images.length === 0) return null;
-
-    // 1순위: "{cardType}-" prefix 정확 매칭
-    let match = images.find(name => name.toLowerCase().startsWith(`${cardType}-`));
-
-    // 2순위: 파일명에 타입 관련 키워드 포함
-    if (!match) {
-      const keywords = typeKeywords[cardType] || [cardType];
-      match = images.find(name => {
-        const lower = name.toLowerCase();
-        return keywords.some(kw => lower.includes(kw));
-      });
-    }
-
-    // 3순위: 아무 이미지나 사용 (랜덤)
-    if (!match) {
-      match = images[Math.floor(Math.random() * images.length)];
-    }
-
-    const buffer = await readFile(join(dir, match));
-    const base64 = buffer.toString('base64');
-
-    const ext = match.split('.').pop().toLowerCase();
-    const mimeMap = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' };
-
-    return { base64, mimeType: mimeMap[ext] || 'image/png' };
-  } catch {
-    return null;
+  // 1순위: 같은 학원의 같은 카드 번호 (올인원3.png → 카드3)
+  if (cardNumber) {
+    const dir = join(REFS_DIR, academyKey);
+    try {
+      const entries = await readdir(dir);
+      const images = entries.filter(name => /\.(png|jpg|jpeg|webp)$/i.test(name));
+      const numbered = findNumberedRef(images, academyKey, cardNumber);
+      if (numbered) {
+        const ref = await loadImageAsRef(join(dir, numbered));
+        results.push(ref);
+        usedFiles.add(`${academyKey}/${numbered}`);
+      }
+    } catch { /* dir not found */ }
   }
+
+  // 2순위: 다른 학원의 같은 카드 번호 (크로스 레퍼런스)
+  if (cardNumber && results.length < maxRefs) {
+    for (const otherAcademy of allAcademies) {
+      if (otherAcademy === academyKey || results.length >= maxRefs) continue;
+      const dir = join(REFS_DIR, otherAcademy);
+      try {
+        const entries = await readdir(dir);
+        const images = entries.filter(name => /\.(png|jpg|jpeg|webp)$/i.test(name));
+        const numbered = findNumberedRef(images, otherAcademy, cardNumber);
+        if (numbered && !usedFiles.has(`${otherAcademy}/${numbered}`)) {
+          const ref = await loadImageAsRef(join(dir, numbered));
+          results.push(ref);
+          usedFiles.add(`${otherAcademy}/${numbered}`);
+        }
+      } catch { /* skip */ }
+    }
+  }
+
+  // 3순위: 같은 학원의 타입 매칭 (hook-01.png 등)
+  if (results.length < maxRefs) {
+    const dir = join(REFS_DIR, academyKey);
+    try {
+      const entries = await readdir(dir);
+      const images = entries.filter(name => /\.(png|jpg|jpeg|webp)$/i.test(name));
+
+      // prefix 매칭
+      let match = images.find(name =>
+        name.toLowerCase().startsWith(`${cardType}-`) && !usedFiles.has(`${academyKey}/${name}`)
+      );
+
+      // 키워드 매칭
+      if (!match) {
+        const keywords = typeKeywords[cardType] || [cardType];
+        match = images.find(name => {
+          if (usedFiles.has(`${academyKey}/${name}`)) return false;
+          const lower = name.toLowerCase();
+          return keywords.some(kw => lower.includes(kw));
+        });
+      }
+
+      if (match) {
+        const ref = await loadImageAsRef(join(dir, match));
+        results.push(ref);
+        usedFiles.add(`${academyKey}/${match}`);
+      }
+    } catch { /* skip */ }
+  }
+
+  return results;
+}
+
+/**
+ * 하위 호환: 단일 레퍼런스 반환 (기존 코드 호환)
+ */
+export async function findReference(academyKey, cardType, cardNumber) {
+  const refs = await findReferences(academyKey, cardType, cardNumber);
+  return refs.length > 0 ? refs[0] : null;
 }

@@ -51,12 +51,30 @@ export async function designCard(card, cssVariables, academyConfig, usedLayouts 
 
   // 레퍼런스 이미지가 있으면 multimodal contents로 변환
   let contents;
-  const ref = options.referenceImage;
-  if (ref) {
-    contents = [
-      { inlineData: { data: ref.base64, mimeType: ref.mimeType } },
-      { text: `[위 이미지는 ${card.type} 타입의 레퍼런스 디자인입니다. 이 스타일을 참고하되 동일하게 복사하지 말고, 브랜드 톤과 레이아웃 감각만 참고하세요.]\n\n${userPrompt}` },
-    ];
+  const refs = options.referenceImages || (options.referenceImage ? [options.referenceImage] : []);
+  if (refs.length > 0) {
+    const parts = [];
+    for (let i = 0; i < refs.length; i++) {
+      parts.push({ inlineData: { data: refs[i].base64, mimeType: refs[i].mimeType } });
+    }
+    const refCount = refs.length;
+    parts.push({
+      text: `[위 ${refCount}장은 실제 운영 중인 카드뉴스 레퍼런스입니다.]
+
+★★★ 핵심 지시: 위 레퍼런스와 동일한 수준의 퀄리티를 만드세요 ★★★
+- 타이포그래피: 레퍼런스처럼 헤드라인을 화면의 50~60%를 차지하도록 초대형으로
+- 컬러 블로킹: 레퍼런스처럼 과감한 단색 풀배경 + 대비되는 텍스트 색상
+- 레이아웃: 레퍼런스처럼 콘텐츠가 화면을 꽉 채우고, 빈 공간이 거의 없게
+- 비주얼 밀도: 레퍼런스처럼 장식 요소(기하학 도형, 큰 아이콘 배지)로 화면을 풍성하게
+- 브랜드 바: 레퍼런스처럼 하단에 학원명/로고 영역 확실히 배치
+- 대비: 레퍼런스처럼 제목과 부제의 크기 차이가 극단적으로 크게
+
+절대 "밋밋한 단색 배경 + 작은 글씨 + 큰 여백" 디자인을 만들지 마세요.
+레퍼런스 수준에 못 미치면 실패입니다.
+
+${userPrompt}`,
+    });
+    contents = parts;
   } else {
     contents = userPrompt;
   }
