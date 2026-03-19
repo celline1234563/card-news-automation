@@ -23,6 +23,9 @@ async function loadLogoDataUri(academyKey) {
 function injectLogo(html, logoDataUri, academyName) {
   if (!logoDataUri) return html;
 
+  // 인플로우 로고(.card-sign)가 이미 있으면 워터마크 스킵 플래그
+  const hasInlineLogo = /class="[^"]*card-sign[^"]*"/.test(html);
+
   const logoImg = `<img src="${logoDataUri}" style="height:40px; object-fit:contain; display:block;" />`;
   let replaced = false;
 
@@ -69,12 +72,22 @@ function injectLogo(html, logoDataUri, academyName) {
   // footer 태그 자체도 제거 (class 없이 <footer>로만 된 경우)
   html = html.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '');
 
-  // 6) 중앙 하단 로고 워터마크 — 항상 1개만 삽입 (누끼 스타일)
-  const watermarkHtml = `
-<div style="position:fixed; bottom:32px; left:50%; transform:translateX(-50%); z-index:9999; pointer-events:none;">
-  <img src="${logoDataUri}" style="height:60px; object-fit:contain; opacity:0.35;" />
+  // 6) 인플로우 로고가 있으면 쉴드+워터마크 스킵
+  if (!hasInlineLogo) {
+    // 하단 그라데이션 쉴드 — 콘텐츠를 자연스럽게 페이드아웃하여 로고 영역 확보
+    const shieldHtml = `
+<div style="position:fixed; bottom:0; left:0; width:1080px; height:90px;
+            background: linear-gradient(to bottom, transparent 0%, var(--color-background, #FFFFFF) 40%);
+            z-index:9998; pointer-events:none;"></div>`;
+
+    // 로고 워터마크 — 쉴드 위에 배치
+    const watermarkHtml = `
+<div style="position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:9999; pointer-events:none;">
+  <img src="${logoDataUri}" style="height:50px; object-fit:contain; opacity:0.35;" />
 </div>`;
-  html = html.replace('</body>', watermarkHtml + '\n</body>');
+
+    html = html.replace('</body>', shieldHtml + watermarkHtml + '\n</body>');
+  }
 
   return html;
 }
