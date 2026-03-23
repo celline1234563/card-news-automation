@@ -83,7 +83,7 @@ function injectLogo(html, logoDataUri, academyName) {
     // 로고 워터마크 — 쉴드 위에 배치
     const watermarkHtml = `
 <div style="position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:9999; pointer-events:none;">
-  <img src="${logoDataUri}" style="height:50px; object-fit:contain; opacity:0.35;" />
+  <img src="${logoDataUri}" style="height:60px; object-fit:contain; opacity:0.8;" />
 </div>`;
 
     html = html.replace('</body>', shieldHtml + watermarkHtml + '\n</body>');

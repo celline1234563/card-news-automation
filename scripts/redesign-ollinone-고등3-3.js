@@ -13,9 +13,9 @@ const __dirname = dirname(__filename);
 const ROOT = join(__dirname, '..');
 
 const ACADEMY_KEY = 'ollinone';
-const SOURCE_DIR = join(ROOT, 'output', '올인원 수학학원-수내-수학학원-내신1등급--2026-새-학기엔-준비-방-2026-03-17');
+const SOURCE_DIR = join(ROOT, 'output', '올인원 수학학원-내신1등급-재디자인-2026-03-18');
 const today = new Date().toISOString().slice(0, 10);
-const OUTPUT_DIR = join(ROOT, 'output', `올인원 수학학원-내신1등급-재디자인-${today}`);
+const OUTPUT_DIR = join(ROOT, 'output', `올인원-고등3-3-내신1등급-재디자인-${today}`);
 
 // ── 기존 copy.json 로드 ──
 console.log('═══════════════════════════════════════════');

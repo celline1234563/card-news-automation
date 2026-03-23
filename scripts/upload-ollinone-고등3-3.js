@@ -10,7 +10,7 @@ const __dirname = dirname(__filename);
 const ROOT = join(__dirname, '..');
 
 const ACADEMY_KEY = 'ollinone';
-const OUTPUT_DIR = join(ROOT, 'output', '올인원 수학학원-내신1등급-재디자인-2026-03-18');
+const OUTPUT_DIR = join(ROOT, 'output', '올인원-고등3-3-내신1등급-재디자인-2026-03-23');
 
 // ── Step 1: 노션에서 고등3-3 페이지 찾기 ──
 console.log('═══ Step 1: 노션에서 올인원 고등3-3 페이지 찾기 ═══');
