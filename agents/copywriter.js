@@ -31,6 +31,7 @@ export async function run(cards, topic, academyConfig, options = {}) {
     lines.push(`타입: ${card.type}`);
     lines.push(`헤드라인: ${(card.headline || '').replace(/<\/?em>/g, '')}`);
     if (card.subtext) lines.push(`서브텍스트: ${card.subtext}`);
+    if (card.content_brief) lines.push(`★ 기획 의도: ${card.content_brief}`);
     if (card.stat) lines.push(`통계: ${card.stat} ${card.stat_label || ''}`);
     if (card.quote_main) lines.push(`인용: "${card.quote_main}"`);
     if (card.cta_text) lines.push(`CTA: ${card.cta_text}`);

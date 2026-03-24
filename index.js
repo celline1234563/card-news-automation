@@ -14,6 +14,8 @@ import { harmonizeAndDesign } from './agents/series-harmonizer.js';
 import { qaAndRegenerate } from './agents/visual-qa.js';
 import { pickAllImages } from './agents/image-picker.js';
 import { syncAllReferences } from './agents/reference-syncer.js';
+import { run as runCopywriter } from './agents/copywriter.js';
+import { validateConsistency } from './agents/copy-validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -148,6 +150,32 @@ export async function runPipeline(topic, academyId, options = {}) {
     join(outputDir, `card-${String(i + 1).padStart(2, '0')}.png`)
   );
 
+  // ── Stage 6.5: 원고 생성 ──
+  let copies = null;
+  console.log('▶ Stage 6.5: 원고 생성');
+  try {
+    copies = await runCopywriter(copyData.cards, topic, academy, {
+      keyword: options.keyword || topic,
+    });
+    // copies.json 저장
+    const { writeFile } = await import('fs/promises');
+    await writeFile(join(outputDir, 'copies.json'), JSON.stringify(copies, null, 2), 'utf-8');
+    console.log(`  ✅ 원고 ${copies.length}장 생성 완료 → copies.json\n`);
+  } catch (err) {
+    console.log(`  ⚠️ 원고 생성 실패: ${err.message}\n`);
+  }
+
+  // ── Stage 6.7: 기획-디자인-원고 일치도 검증 ──
+  if (copies) {
+    console.log('▶ Stage 6.7: 기획-디자인-원고 일치도 검증');
+    try {
+      await validateConsistency(copyData.cards, copies);
+    } catch (err) {
+      console.log(`  ⚠️ 일치도 검증 스킵: ${err.message}`);
+    }
+    console.log('');
+  }
+
   // ── Stage 7: PNG 비주얼 QA ──
   console.log('');
   console.log('▶ Stage 7: PNG 비주얼 QA');
@@ -172,7 +200,7 @@ export async function runPipeline(topic, academyId, options = {}) {
   console.log(`  📁 ${outputDir}`);
   console.log('═══════════════════════════════════════════');
 
-  return { cards: copyData.cards, outputDir, pngPaths, htmlSources };
+  return { cards: copyData.cards, outputDir, pngPaths, htmlSources, copies };
 }
 
 // CLI 모드로 실행될 때만 main() 호출

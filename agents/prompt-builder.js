@@ -99,6 +99,7 @@ export async function buildCardPrompt(card, cssVariables, academyConfig, usedLay
     `레이아웃 힌트: ${card.layout_hint || '자유'}`,
     `헤드라인: ${card.headline || ''}`,
     `서브텍스트: ${card.subtext || ''}`,
+    card.content_brief ? `★ 기획 의도 (반드시 따르세요): ${card.content_brief}` : null,
     card.body ? `본문: ${card.body}` : null,
     card.stat ? `핵심 숫자: ${card.stat}` : null,
     card.stat_label ? `숫자 설명: ${card.stat_label}` : null,

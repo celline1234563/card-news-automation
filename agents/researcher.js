@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { readFile, readdir } from 'fs/promises';
+import { readFile, readdir, writeFile } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -152,6 +152,13 @@ export async function research(topic, academyName, options = {}) {
     generated_html: card.generated_html || null,
     layout_used: card.layout_used || null,
   }));
+
+  // 디버깅용: 기획 데이터 임시 저장
+  try {
+    const debugPath = join(__dirname, '..', 'temp', 'last-research.json');
+    await writeFile(debugPath, JSON.stringify(result, null, 2), 'utf-8');
+    console.log(`  💾 기획 데이터 저장: temp/last-research.json`);
+  } catch { /* ignore */ }
 
   console.log(`  ✅ 카드 ${result.cards.length}장 카피 생성 완료`);
   return result;
