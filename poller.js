@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'path';
 import { loadConfig } from './agents/config-loader.js';
 import { research } from './agents/researcher.js';
 import { run as runCopywriter } from './agents/copywriter.js';
+import { critiqueCopies } from './agents/copy-critic.js';
 import { runPipeline } from './index.js';
 import * as notion from './agents/notion-connector.js';
 import { runBlog } from './agents/blog-runner.js';
@@ -61,6 +62,7 @@ async function handlePlanRequests() {
         pageContent: pageContent.planningContent,
         academyKey: page.academyKey,
         contentTypes: page.contentTypes,
+        region: academy.region,
       });
       await log(`  ✅ 카드 ${copyData.cards.length}장 기획 완료`);
 
@@ -112,11 +114,17 @@ async function handleDesignRequests() {
         runBlog(topic, page.academyKey, academy, cards, comments.map(c => c.text), page.keyword || ''),
       ]);
 
-      const copies = await runCopywriter(cards, topic, academy, {
+      const rawCopies = await runCopywriter(cards, topic, academy, {
         keyword: page.keyword,
+        academyKey: page.academyKey,
       });
 
-      await notion.writePlanAndCopy(page.id, cards, copies);
+      const { copies, criticResult } = await critiqueCopies(rawCopies, cards, academy, {
+        keyword: page.keyword,
+        academyKey: page.academyKey,
+      });
+
+      await notion.writePlanAndCopy(page.id, cards, copies, page.keyword, criticResult);
       await notion.writeBlog(page.id, blogResult.sections, blogResult.scores, blogResult.flagged, blogResult.failList);
       await notion.appendFilePaths(page.id, result.pngPaths, page.title, academy.name, academy.drive_folder_id, result.htmlSources);
       await notion.setStatus(page.id, '디자인 1차');
@@ -164,6 +172,7 @@ async function handleDesignRevisions() {
         revisionInstructions: instructions,
         academyKey: page.academyKey,
         contentTypes: page.contentTypes,
+        region: academy.region,
       });
 
       // diff 댓글 기록

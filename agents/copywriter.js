@@ -9,21 +9,43 @@ const __dirname = dirname(__filename);
 const client = new Anthropic();
 
 /**
+ * 파일을 안전하게 읽기 (없으면 빈 문자열)
+ */
+async function safeReadFile(filePath) {
+  try {
+    return await readFile(filePath, 'utf-8');
+  } catch {
+    return '';
+  }
+}
+
+/**
  * 기획안 카드 배열 → 카드별 원고(300~500자) 생성
  *
  * @param {Object[]} cards - 기획안 카드 배열
  * @param {string} topic - 주제
- * @param {Object} academyConfig - { name, ... }
+ * @param {Object} academyConfig - { name, region, grade, subject, ... }
  * @param {Object} [options]
  * @param {string} [options.keyword] - 메인 키워드
+ * @param {string} [options.academyKey] - 학원 키 (보이스 가이드/링크 로드용)
+ * @param {string} [options.researchSummary] - 리서치 요약
  * @returns {Promise<Object[]>} copies 배열 [{ card, text, hashtags }]
  */
 export async function run(cards, topic, academyConfig, options = {}) {
   // 매 호출마다 파일 읽기 (핫리로드)
-  const systemPrompt = await readFile(join(__dirname, '..', 'prompts', 'copywriter-system.txt'), 'utf-8');
-  const userTemplate = await readFile(join(__dirname, '..', 'prompts', 'copywriter-user.txt'), 'utf-8');
+  const [systemTemplate, userTemplate, voiceGuide, linkData] = await Promise.all([
+    readFile(join(__dirname, '..', 'prompts', 'copywriter-system.txt'), 'utf-8'),
+    readFile(join(__dirname, '..', 'prompts', 'copywriter-user.txt'), 'utf-8'),
+    options.academyKey
+      ? safeReadFile(join(__dirname, '..', 'config', 'brand', `${options.academyKey}-voice.md`))
+      : Promise.resolve(''),
+    options.academyKey
+      ? safeReadFile(join(__dirname, '..', 'data', 'links', `${options.academyKey}.md`))
+      : Promise.resolve(''),
+  ]);
 
   console.log('  📝 원고 생성 요청 중...');
+  if (voiceGuide) console.log(`  🎤 보이스 가이드 로드: ${options.academyKey}`);
 
   // 카드 상세 텍스트 구성
   const cardsDetail = cards.map(card => {
@@ -47,14 +69,31 @@ export async function run(cards, topic, academyConfig, options = {}) {
       );
       lines.push(`단계: ${stepTexts.join(' → ')}`);
     }
+    if (card.content_bullets && Array.isArray(card.content_bullets)) {
+      lines.push(`콘텐츠 방향:`);
+      card.content_bullets.forEach(b => lines.push(`  • ${b}`));
+    }
+    if (card.visual_asset) {
+      lines.push(`시각자료: ${card.visual_asset}`);
+    }
     return lines.join('\n');
   }).join('\n\n');
 
-  // 템플릿 치환
+  // 시스템 프롬프트 치환
+  const systemPrompt = systemTemplate
+    .replace('{{VOICE_GUIDE}}', voiceGuide || '(보이스 가이드 없음 — 기본 톤 사용)')
+    .replace('{{RESEARCH_SUMMARY}}', options.researchSummary || '(리서치 요약 없음)')
+    .replace('{{LINK_DATA}}', linkData || '(링크 정보 없음)');
+
+  // 유저 프롬프트 치환
+  const grade = Array.isArray(academyConfig.grade) ? academyConfig.grade.join(', ') : (academyConfig.grade || '');
   const userMessage = userTemplate
     .replace('{{TOPIC}}', topic)
     .replace('{{KEYWORD}}', options.keyword || topic)
     .replace('{{ACADEMY_NAME}}', academyConfig.name)
+    .replace('{{REGION}}', academyConfig.region || '')
+    .replace('{{GRADE}}', grade)
+    .replace('{{SUBJECT}}', academyConfig.subject || '')
     .replace('{{CARDS_DETAIL}}', cardsDetail);
 
   const response = await client.messages.create({

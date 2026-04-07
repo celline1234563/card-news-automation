@@ -209,9 +209,29 @@ export async function getPageContent(pageId) {
   };
 }
 
+// ── 키워드 하이라이팅 헬퍼 ──
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function buildHighlightedText(text, keyword) {
+  if (!keyword || !text) {
+    return [{ type: 'text', text: { content: text || '' } }];
+  }
+  const parts = text.split(new RegExp(`(${escapeRegex(keyword)})`, 'gi'));
+  return parts.filter(p => p).map(part => ({
+    type: 'text',
+    text: { content: part },
+    ...(part.toLowerCase() === keyword.toLowerCase()
+      ? { annotations: { bold: true, color: 'orange' } }
+      : {}),
+  }));
+}
+
 // ── ⑤ writePlanAndCopy ──
 
-export async function writePlanAndCopy(pageId, cards, copies) {
+export async function writePlanAndCopy(pageId, cards, copies, keyword = '', criticResult = null) {
   // 기존 AI 섹션 삭제
   try {
     const existing = await withRetry(() => notion.blocks.children.list({ block_id: pageId, page_size: 100 }));
@@ -272,6 +292,13 @@ export async function writePlanAndCopy(pageId, cards, copies) {
       );
       lines.push(`단계: ${stepTexts.join(' → ')}`);
     }
+    if (card.content_bullets && Array.isArray(card.content_bullets)) {
+      lines.push(`콘텐츠:`);
+      card.content_bullets.forEach(b => lines.push(`  • ${b}`));
+    }
+    if (card.visual_asset) {
+      lines.push(`시각자료: ${card.visual_asset}`);
+    }
 
     children.push({
       object: 'block',
@@ -300,6 +327,11 @@ export async function writePlanAndCopy(pageId, cards, copies) {
 
   // ── 원고 섹션 ──
   if (copies && copies.length > 0) {
+    const typeEmoji = {
+      hook: '🎯', problem: '❗', data: '📊', insight: '💡',
+      solution: '✅', example: '📝', summary: '📋', cta: '📢',
+    };
+
     children.push({
       object: 'block',
       type: 'heading_2',
@@ -307,37 +339,63 @@ export async function writePlanAndCopy(pageId, cards, copies) {
         rich_text: [{ type: 'text', text: { content: '📝 원고' } }],
       },
     });
-    children.push({
-      object: 'block',
-      type: 'paragraph',
-      paragraph: {
-        rich_text: [{
-          type: 'text',
-          text: { content: '(카드별 300~500자 본문 — 메인키워드 중심)' },
-          annotations: { italic: true, color: 'gray' },
-        }],
-      },
-    });
 
-    for (const copy of copies) {
+    // 품질 점수 요약 (copy-critic 결과가 있을 때)
+    if (criticResult) {
+      const avgScore = criticResult.overall_score || '—';
+      const avgLen = Math.round(copies.reduce((sum, c) => sum + (c.text?.length || 0), 0) / copies.length);
+      const failCount = criticResult.rewrite_needed?.length || 0;
       children.push({
         object: 'block',
-        type: 'heading_3',
-        heading_3: {
-          rich_text: [{ type: 'text', text: { content: `카드 ${copy.card} 원고` } }],
+        type: 'callout',
+        callout: {
+          icon: { type: 'emoji', emoji: failCount === 0 ? '✅' : '📊' },
+          rich_text: [{
+            type: 'text',
+            text: { content: `원고 품질: 평균 ${avgScore}/10점 | 키워드: "${keyword || '—'}" | 평균 ${avgLen}자${failCount > 0 ? ` | 수정됨: 카드 ${criticResult.rewrite_needed.join(',')}` : ''}` },
+          }],
         },
       });
-
+    } else {
       children.push({
         object: 'block',
         type: 'paragraph',
         paragraph: {
-          rich_text: [{ type: 'text', text: { content: copy.text } }],
+          rich_text: [{
+            type: 'text',
+            text: { content: `(카드별 300~500자 본문${keyword ? ` — 키워드: "${keyword}"` : ''})` },
+            annotations: { italic: true, color: 'gray' },
+          }],
+        },
+      });
+    }
+
+    for (const copy of copies) {
+      const matchingCard = cards.find(c => c.number === copy.card);
+      const cardType = matchingCard?.type || 'unknown';
+      const emoji = typeEmoji[cardType] || '📄';
+      const headline = (matchingCard?.headline || '').replace(/<\/?em>/g, '');
+      const charCount = copy.text?.length || 0;
+
+      // 카드별 점수 (critic 결과가 있을 때)
+      const cardScore = criticResult?.card_scores?.find(cs => cs.card === copy.card);
+      const scoreText = cardScore ? ` ${cardScore.total}점` : '';
+
+      // toggle 블록: 카드번호 + [타입] + 헤드라인 + (글자수)
+      const toggleChildren = [];
+
+      // 본문 (키워드 하이라이팅)
+      toggleChildren.push({
+        object: 'block',
+        type: 'paragraph',
+        paragraph: {
+          rich_text: buildHighlightedText(copy.text || '', keyword),
         },
       });
 
+      // 해시태그
       if (copy.hashtags && copy.hashtags.length > 0) {
-        children.push({
+        toggleChildren.push({
           object: 'block',
           type: 'paragraph',
           paragraph: {
@@ -349,6 +407,20 @@ export async function writePlanAndCopy(pageId, cards, copies) {
           },
         });
       }
+
+      children.push({
+        object: 'block',
+        type: 'toggle',
+        toggle: {
+          rich_text: [
+            { type: 'text', text: { content: `${emoji} 카드 ${copy.card}` }, annotations: { bold: true } },
+            { type: 'text', text: { content: ` [${cardType}]` }, annotations: { color: 'gray' } },
+            { type: 'text', text: { content: ` ${headline}` }, annotations: { italic: true } },
+            { type: 'text', text: { content: ` (${charCount}자${scoreText})` }, annotations: { color: 'gray' } },
+          ],
+          children: toggleChildren,
+        },
+      });
     }
 
     children.push({ object: 'block', type: 'divider', divider: {} });
@@ -754,6 +826,14 @@ export async function writeBlog(pageId, sections, scores, flagged = false, failL
  */
 export async function postErrorComment(pageId, errorMessage) {
   try {
+    // 이미 에러 댓글이 있으면 중복으로 달지 않음
+    const existing = await withRetry(() => notion.comments.list({ block_id: pageId }));
+    const hasError = existing.results.some(c => {
+      const text = c.rich_text?.map(t => t.plain_text).join('') || '';
+      return text.includes('⚠️ 자동화 처리 중 오류 발생');
+    });
+    if (hasError) return;
+
     await withRetry(() => notion.comments.create({
       parent: { page_id: pageId },
       rich_text: [{

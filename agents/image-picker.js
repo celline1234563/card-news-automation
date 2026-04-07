@@ -225,10 +225,57 @@ const TYPE_DEFAULT_CATEGORY = {
   cta: '학원외관',
 };
 
+/**
+ * visual_asset 텍스트에서 사진 카테고리 키워드를 감지
+ * "학원 소그룹 수업 실사진" → "수업사진"
+ * "상담 장면 사진" → "상담사진"
+ */
+const VISUAL_ASSET_CATEGORY_MAP = [
+  { keywords: ['수업', '강의', '소그룹', '문제 풀이', '화이트보드'], category: '수업사진' },
+  { keywords: ['학생', '학생들'], category: '학생사진' },
+  { keywords: ['외관', '건물', '입구', '간판'], category: '학원외관' },
+  { keywords: ['상담', '면담', '학부모'], category: '상담사진' },
+  { keywords: ['선생님', '강사', '원장'], category: '선생님사진' },
+  { keywords: ['교재', '교과서', '문제집'], category: '교재사진' },
+  { keywords: ['설명회', '입학설명', '간담회'], category: '설명회사진' },
+  { keywords: ['후기', '리뷰', '카톡', '카카오톡'], category: '후기사진' },
+  { keywords: ['자습', '자기주도', '독서실'], category: '자습사진' },
+];
+
+function extractCategoryFromVisualAsset(visualAsset) {
+  if (!visualAsset || typeof visualAsset !== 'string') return null;
+
+  const lower = visualAsset.toLowerCase();
+
+  // "실사진", "사진", "photo" 키워드가 있는 경우만 사진 매칭 시도
+  if (!lower.includes('사진') && !lower.includes('photo') && !lower.includes('실사')) return null;
+
+  for (const { keywords, category } of VISUAL_ASSET_CATEGORY_MAP) {
+    if (keywords.some(kw => lower.includes(kw))) {
+      return category;
+    }
+  }
+  return null;
+}
+
 function autoAssignCategory(cards, academyKey) {
   let assigned = 0;
+  let fromVisualAsset = 0;
+
   for (const card of cards) {
     if (card.image_category) continue;
+
+    // 1순위: visual_asset에서 사진 카테고리 추출
+    const vaCategory = extractCategoryFromVisualAsset(card.visual_asset);
+    if (vaCategory) {
+      card.image_category = vaCategory;
+      card._auto_assigned_category = true;
+      assigned++;
+      fromVisualAsset++;
+      continue;
+    }
+
+    // 2순위: 카드 타입 기반 기본값
     const defaultCat = TYPE_DEFAULT_CATEGORY[card.type];
     if (defaultCat) {
       card.image_category = defaultCat;
@@ -236,8 +283,9 @@ function autoAssignCategory(cards, academyKey) {
       assigned++;
     }
   }
+
   if (assigned > 0) {
-    console.log(`  📸 image_category 자동 할당: ${assigned}장`);
+    console.log(`  📸 image_category 자동 할당: ${assigned}장 (visual_asset 기반 ${fromVisualAsset}장)`);
   }
 }
 

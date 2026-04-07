@@ -22,6 +22,8 @@ function cardsToText(cards) {
     if (c.quote_main) text += `  인용: "${c.quote_main}"\n`;
     if (c.before_title) text += `  비교: ${c.before_title} vs ${c.after_title}\n`;
     if (c.cta_text) text += `  CTA: ${c.cta_text}\n`;
+    if (c.content_bullets) text += `  콘텐츠:\n${c.content_bullets.map(b => `    • ${b}`).join('\n')}\n`;
+    if (c.visual_asset) text += `  시각자료: ${c.visual_asset}\n`;
     return text;
   }).join('\n');
 }

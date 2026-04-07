@@ -117,6 +117,8 @@ export async function buildCardPrompt(card, cssVariables, academyConfig, usedLay
     card.after_items ? `우측 항목: ${card.after_items}` : null,
     card.deco_icons ? `장식 아이콘: ${JSON.stringify(card.deco_icons)} (배경 장식용 Lucide 아이콘, 120~200px, opacity 0.08~0.15)` : null,
     card.design_brief ? `디자인 브리프: ${card.design_brief}` : null,
+    card.visual_asset ? `시각 자료 스펙: ${card.visual_asset}\n→ 위 스펙대로 표/차트/시각자료를 HTML/CSS로 정확히 구현하세요. 항목·수치·배치를 그대로 반영하세요.` : null,
+    card.content_bullets ? `콘텐츠 방향:\n${card.content_bullets.map(b => `  • ${b}`).join('\n')}` : null,
   ].filter(Boolean).join('\n');
   template = template.replace('{{CARD_FIELDS}}', fields);
 

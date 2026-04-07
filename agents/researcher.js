@@ -9,6 +9,17 @@ const __dirname = dirname(__filename);
 const client = new Anthropic();
 
 /**
+ * 파일을 안전하게 읽기 (없으면 빈 문자열)
+ */
+async function safeReadFile(filePath) {
+  try {
+    return await readFile(filePath, 'utf-8');
+  } catch {
+    return '';
+  }
+}
+
+/**
  * 학원별 케이스 데이터(MD 파일) 자동 로드
  * data/cases/{academyKey}/ 폴더의 모든 .md 파일을 읽어서 주제와 관련된 것만 반환
  */
@@ -42,12 +53,31 @@ async function loadCaseData(academyKey, topic) {
  * @param {string[]} [options.revisionInstructions] - @수정 지시
  * @param {string} [options.academyKey] - 학원 키 (케이스 데이터 로드용)
  * @param {string[]} [options.contentTypes] - 콘텐츠 타입 (예: ["09-성적향상후기"])
+ * @param {string} [options.region] - 학원 지역 (예: "관악구, 금천구")
  */
 export async function research(topic, academyName, options = {}) {
   // 매 호출마다 파일 읽기 (핫리로드)
-  const systemPromptPath = join(__dirname, '..', 'prompts', 'researcher-system.txt');
-  let systemPrompt = await readFile(systemPromptPath, 'utf-8');
-  systemPrompt = systemPrompt.replace('{{ACADEMY_NAME}}', academyName);
+  const [systemPromptRaw, voiceGuide, brandStrategy] = await Promise.all([
+    readFile(join(__dirname, '..', 'prompts', 'researcher-system.txt'), 'utf-8'),
+    options.academyKey
+      ? safeReadFile(join(__dirname, '..', 'config', 'brand', `${options.academyKey}-voice.md`))
+      : Promise.resolve(''),
+    options.academyKey
+      ? safeReadFile(join(__dirname, '..', 'config', 'brand', `${options.academyKey}-strategy.md`))
+      : Promise.resolve(''),
+  ]);
+
+  if (voiceGuide) console.log(`  🎤 보이스 가이드 로드: ${options.academyKey}`);
+  if (brandStrategy) console.log(`  📋 브랜드 전략서 로드: ${options.academyKey}`);
+
+  // 학원 지역 정보
+  const region = options.region || '';
+
+  let systemPrompt = systemPromptRaw
+    .replace('{{ACADEMY_NAME}}', academyName)
+    .replace(/\{\{REGION\}\}/g, region)
+    .replace('{{VOICE_GUIDE}}', voiceGuide || '(보이스 가이드 없음 — 기본 톤 사용)')
+    .replace('{{BRAND_STRATEGY}}', brandStrategy || '(브랜드 전략서 없음)');
 
   console.log('  📝 Claude에게 카피 생성 요청 중...');
 
