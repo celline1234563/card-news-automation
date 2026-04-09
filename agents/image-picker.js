@@ -240,7 +240,7 @@ const VISUAL_ASSET_CATEGORY_MAP = [
   { keywords: ['설명회', '입학설명', '간담회'], category: '설명회사진' },
   { keywords: ['후기', '리뷰', '카톡', '카카오톡'], category: '후기사진' },
   { keywords: ['자습', '자기주도', '독서실'], category: '자습사진' },
-  { keywords: ['작품', '에세이', '글쓰기', '작문', '자소서', '캡처', '성적표'], category: '학생작품' },
+  { keywords: ['작품', '에세이', '글쓰기', '작문', '자소서', '캡처', '성적표'], category: '수업사진' },
 ];
 
 function extractCategoryFromVisualAsset(visualAsset) {

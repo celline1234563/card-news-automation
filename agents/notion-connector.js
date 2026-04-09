@@ -292,6 +292,8 @@ export async function writePlanAndCopy(pageId, cards, copies, keyword = '', crit
       );
       lines.push(`단계: ${stepTexts.join(' → ')}`);
     }
+    if (card.image_category) lines.push(`사진카테고리: ${card.image_category}`);
+    if (card.content_brief) lines.push(`기획의도: ${card.content_brief}`);
     if (card.content_bullets && Array.isArray(card.content_bullets)) {
       lines.push(`콘텐츠:`);
       card.content_bullets.forEach(b => lines.push(`  • ${b}`));
@@ -299,6 +301,18 @@ export async function writePlanAndCopy(pageId, cards, copies, keyword = '', crit
     if (card.visual_asset) {
       lines.push(`시각자료: ${card.visual_asset}`);
     }
+    if (card.emphasis_style) lines.push(`강조스타일: ${card.emphasis_style}`);
+    if (card.emotion) lines.push(`감정: ${card.emotion}`);
+    if (card.design_brief) lines.push(`디자인브리프: ${card.design_brief}`);
+    if (card.focal_point) lines.push(`포컬포인트: ${card.focal_point}`);
+    if (card.deco_icons) lines.push(`장식아이콘: ${card.deco_icons.join(', ')}`);
+    if (card.before_title) lines.push(`비교좌: ${card.before_title}`);
+    if (card.after_title) lines.push(`비교우: ${card.after_title}`);
+    if (card.before_items) lines.push(`좌항목: ${card.before_items}`);
+    if (card.after_items) lines.push(`우항목: ${card.after_items}`);
+    if (card.quote_sub) lines.push(`인용응답: "${card.quote_sub}"`);
+    if (card.sender) lines.push(`발신자: ${card.sender}`);
+    if (card.cta_sub) lines.push(`CTA설명: ${card.cta_sub}`);
 
     children.push({
       object: 'block',
