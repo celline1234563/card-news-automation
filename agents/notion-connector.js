@@ -642,6 +642,94 @@ export async function setStatus(pageId, statusValue) {
   }));
 }
 
+// ── ⑫ createIntake ──
+
+/**
+ * 같은 학원 prefix + 같은 월의 카드 개수를 세서 다음 번호를 반환.
+ * 제목 패턴: "[prefix M-N] ..." 또는 "[prefixM-N] ..."
+ */
+async function getNextCardNumber(prefix, month) {
+  const pattern = new RegExp(`^\\[\\s*${prefix}\\s*${month}-(\\d+)`);
+  let cursor = undefined;
+  let maxN = 0;
+
+  do {
+    const res = await withRetry(() => notion.dataSources.query({
+      data_source_id: DATASOURCE_ID,
+      filter: { property: 'Name', title: { contains: `${prefix} ${month}-` } },
+      page_size: 100,
+      start_cursor: cursor,
+    }));
+    for (const page of res.results) {
+      const titleProp = Object.values(page.properties).find(p => p.type === 'title');
+      const title = titleProp?.title?.map(t => t.plain_text).join('') || '';
+      const m = title.match(pattern);
+      if (m) maxN = Math.max(maxN, parseInt(m[1], 10));
+    }
+    cursor = res.has_more ? res.next_cursor : undefined;
+  } while (cursor);
+
+  return maxN + 1;
+}
+
+/**
+ * 직원이 회의록을 입력하면 노션에 새 카드(페이지)를 생성하고 자동으로
+ * 상태=기획 착수 + 제작 포맷=카드뉴스 로 세팅. 본문에 "💡 아이디어 정리"
+ * 헤딩 아래 회의록을 넣어 researcher가 읽을 수 있게 함.
+ *
+ * @param {object} args
+ * @param {string} args.academyKey  ollinone | jinhak | toktok
+ * @param {string} args.topic       제목에 들어갈 주제 한 줄
+ * @param {string} args.content     회의록 본문 (여러 줄 OK)
+ * @returns {Promise<{id:string, title:string, url:string}>}
+ */
+export async function createIntake({ academyKey, topic, content }) {
+  if (!academyKey || !topic || !content) {
+    throw new Error('createIntake: academyKey, topic, content는 모두 필수입니다');
+  }
+
+  // 학원 prefix 조회
+  const raw = await readFile(join(__dirname, '..', 'config', 'academies.json'), 'utf-8');
+  const academies = JSON.parse(raw);
+  const academy = academies[academyKey];
+  if (!academy) throw new Error(`알 수 없는 학원: ${academyKey}`);
+  const prefix = academy.notion_prefix;
+
+  // 다음 번호 채번
+  const month = new Date().getMonth() + 1;
+  const nextNumber = await getNextCardNumber(prefix, month);
+  const title = `[${prefix} ${month}-${nextNumber}] ${topic.trim()}`;
+
+  // 본문 블록: heading + 회의록 단락들
+  const lines = content.split('\n');
+  const children = [
+    {
+      object: 'block',
+      type: 'heading_2',
+      heading_2: { rich_text: [{ type: 'text', text: { content: '💡 아이디어 정리' } }] },
+    },
+  ];
+  for (const line of lines) {
+    children.push({
+      object: 'block',
+      type: 'paragraph',
+      paragraph: { rich_text: [{ type: 'text', text: { content: line } }] },
+    });
+  }
+
+  const newPage = await withRetry(() => notion.pages.create({
+    parent: { type: 'data_source_id', data_source_id: DATASOURCE_ID },
+    properties: {
+      'Name': { title: [{ type: 'text', text: { content: title } }] },
+      '상태': { multi_select: [{ name: '기획 착수' }] },
+      '제작 포맷': { multi_select: [{ name: '카드뉴스' }] },
+    },
+    children,
+  }));
+
+  return { id: newPage.id, title, url: newPage.url };
+}
+
 // ── ⑨ markRevisionComplete ──
 
 /**
