@@ -13,6 +13,7 @@ import { parseCardsFromContent } from './agents/card-parser.js';
 import { sendDailyReport } from './agents/daily-reporter.js';
 import { syncAllReferences } from './agents/reference-syncer.js';
 import { classifyAll } from './agents/image-classifier.js';
+import { runFunnelMap, isFunnelMapDue, nextMonth, funnelTitle } from './scripts/brand-funnel-map.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,6 +21,7 @@ const __dirname = dirname(__filename);
 const INTERVAL = parseInt(process.env.POLLER_INTERVAL || '30000');
 let isProcessing = false;
 let lastReportDate = null;
+let lastFunnelCheck = 0;
 
 async function log(message) {
   const logDir = join(__dirname, 'logs');
@@ -216,6 +218,24 @@ async function checkDailyReport() {
   }
 }
 
+// ── ⑤ 에리브 퍼널 구조도 (매월 25일 10시 이후, 다음 달 것 1회) ──
+
+async function checkFunnelMap() {
+  if (!isFunnelMapDue()) return;
+  // 노션 조회를 30초마다 하지 않도록 1시간에 한 번만 본다
+  if (Date.now() - lastFunnelCheck < 60 * 60 * 1000) return;
+  lastFunnelCheck = Date.now();
+
+  const { year, month } = nextMonth();
+  try {
+    const r = await runFunnelMap({ year, month });
+    if (!r.skipped) await log(`🧭 ${funnelTitle(year, month)} 생성: ${r.url}`);
+  } catch (e) {
+    // 다음 달 콘텐츠가 아직 노션에 없으면 여기로 온다 — 1시간 뒤 다시 본다
+    await log(`⚠️ 퍼널 구조도 보류: ${e.message}`);
+  }
+}
+
 // ── 운영 시간 체크 (월~금 9~15시 KST) ──
 
 function isWorkingHours() {
@@ -232,6 +252,7 @@ async function poll() {
 
   // 리포트는 운영 시간 관계없이 체크 (9시 되면 전송)
   await checkDailyReport();
+  await checkFunnelMap();
 
   if (!isWorkingHours()) return;
 
@@ -271,6 +292,7 @@ if (thisFile === mainFile) {
   console.log(`  감지: 기획 착수 / 제작 요청 / 디자인 수정`);
   console.log(`  운영: 월~금 09:00~15:00 KST`);
   console.log(`  리포트: 주중 09:00 KST`);
+  console.log(`  퍼널 구조도: 매월 25일 10:00 KST 이후 다음 달 것`);
   console.log(`  간격: ${INTERVAL / 1000}초`);
   console.log('');
 
