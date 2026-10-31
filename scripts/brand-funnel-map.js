@@ -345,13 +345,81 @@ const mention = (id) => ({ type: 'mention', mention: { page: { id } } });
 const para = (rich) => ({ type: 'paragraph', paragraph: { rich_text: rich } });
 const bullet = (rich, children) => ({ type: 'bulleted_list_item', bulleted_list_item: { rich_text: rich, ...(children ? { children } : {}) } });
 const h2 = (s) => ({ type: 'heading_2', heading_2: { rich_text: [t(s)] } });
-const h3 = (s) => ({ type: 'heading_3', heading_3: { rich_text: [t(s)] } });
 
 const FIT_TEXT = {
   good: ['맞음', 'green'],
   weak: ['약함', 'yellow'],
   none: ['받을 곳 없음', 'red'],
 };
+
+const short = (s, n = 18) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+const mmd = (s) => s.replace(/["\[\]{}()<>|#;]/g, ' ').replace(/\s+/g, ' ').trim();
+
+/** 한 달 전체를 노출 묶음 → 블로그·웨비나 → 진단서·챌린지 흐름으로 (Notion 이 mermaid 코드 블록을 그림으로 보여 준다) */
+export function toMermaid(map) {
+  const { weeks } = map;
+  const lines = ['flowchart LR'];
+  const allMids = weeks.flatMap((w) => w.mids);
+  const midNode = new Map(allMids.map((m, i) => [m.id, `M${i}`]));
+  const used = new Set();
+
+  weeks.forEach((w, i) => {
+    const n = i + 1;
+    const shown = w.exposure.filter((r) => r.kind !== 'carousel' || r.link?.fit === 'good');
+    const c = {};
+    for (const r of shown) c[r.kind] = (c[r.kind] ?? 0) + 1;
+    const mix = ['reel', 'youtube', 'carousel'].filter((k) => c[k]).map((k) => `${KIND_LABEL[k]} ${c[k]}`).join(' · ') || '없음';
+    const kw = w.keywords[0] ? `${short(mmd(w.keywords[0].text), 14)}${w.keywords.length > 1 ? ` 외 ${w.keywords.length - 1}` : ''}` : '키워드 없음';
+    lines.push(`  subgraph W${n}["${n}주 ${md(w.start)}–${md(w.end)}"]`);
+    lines.push(`    K${n}["① ${kw}"] --> E${n}["② ${mix}"]`);
+    lines.push('  end');
+
+    const toMid = new Map();
+    let orphan = 0;
+    for (const r of shown) {
+      const id = r.link?.targetId;
+      if (id && midNode.has(id)) {
+        const cur = toMid.get(id) ?? { n: 0, weak: 0 };
+        cur.n += 1;
+        if (r.link.fit === 'weak') cur.weak += 1;
+        toMid.set(id, cur);
+      } else orphan += 1;
+    }
+    for (const [id, v] of toMid) {
+      used.add(id);
+      const label = `${v.n}칸${v.weak ? ` 약함 ${v.weak}` : ''}`;
+      lines.push(`  E${n} ${v.weak === v.n ? '-.' : '--'} "${label}" ${v.weak === v.n ? '.->' : '-->'} ${midNode.get(id)}`);
+    }
+    if (orphan) lines.push(`  E${n} -.-> X${n}["받을 곳 없음 ${orphan}칸"]:::bad`);
+  });
+
+  for (const m of allMids) {
+    const node = midNode.get(m.id);
+    lines.push(`  ${node}["③ ${KIND_LABEL[m.kind]} ${md(m.date)}<br/>${short(mmd(m.label))}"]:::${m.kind}`);
+    lines.push(`  ${node} --> F_${m.kind}`);
+    if (!used.has(m.id)) lines.push(`  ${node}:::bad`);
+  }
+  if (allMids.some((m) => m.kind === 'blog')) lines.push(`  F_blog(["④ ${FINAL.blog}"]):::final`);
+  if (allMids.some((m) => m.kind === 'webinar')) lines.push(`  F_webinar(["④ ${FINAL.webinar}"]):::final`);
+  lines.push('  classDef blog fill:#E6F4EA,stroke:#1E8E3E');
+  lines.push('  classDef webinar fill:#E8EDFF,stroke:#3B5BFD');
+  lines.push('  classDef final fill:#FFF0E5,stroke:#B4541B');
+  lines.push('  classDef bad fill:#FDE7E7,stroke:#D92B2B');
+  return lines.join('\n');
+}
+
+const cell = (...rich) => rich.flat();
+const row = (cells) => ({ type: 'table_row', table_row: { cells } });
+const table = (header, rows) => ({
+  type: 'table',
+  table: { table_width: header.length, has_column_header: true, has_row_header: false, children: [row(header.map((h) => [t(h, { bold: true })])), ...rows] },
+});
+
+function codeBlock(content, language) {
+  const chunks = [];
+  for (let i = 0; i < content.length; i += 1900) chunks.push(t(content.slice(i, i + 1900)));
+  return { type: 'code', code: { language, rich_text: chunks } };
+}
 
 export function toBlocks(map, { engine, generatedAt }) {
   const { weeks, byId, issues, counts } = map;
@@ -367,51 +435,55 @@ export function toBlocks(map, { engine, generatedAt }) {
         rich_text: [
           t('키워드·관심사 → 노출(인스타·유튜브) → 회사 블로그·웨비나 → 진단서·챌린지\n', { bold: true }),
           t(`${countLine}\n`),
-          t('노출 칸마다 끝에서 보낼 블로그·웨비나를 붙였어요. '),
-          t('맞음', { color: 'green' }), t(' · '), t('약함', { color: 'yellow' }), t(' · '), t('받을 곳 없음', { color: 'red' }),
-          t(`\n${generatedAt} 자동 생성 · 연결 판단 ${engine === 'gemini' ? 'Gemini' : '규칙(같은 카페 글·가까운 날짜)'}`, { color: 'gray' }),
+          t('연결: '), t('맞음', { color: 'green' }), t(' · '), t('약함', { color: 'yellow' }), t(' · '), t('받을 곳 없음', { color: 'red' }),
+          t(`\n${generatedAt} 자동 생성 · 연결 판단 ${engine === 'gemini' ? 'Gemini' : '규칙(같은 카페 글·가까운 날짜)'} — 사람이 한 번 확인해 주세요`, { color: 'gray' }),
         ],
       },
     },
+    h2('한눈에 보기'),
+    para([t('코드 블록이 그림으로 안 보이면 블록 오른쪽 위에서 "미리 보기"를 누르세요. 실선 = 맞음, 점선 = 약함·없음, 빨간 칸 = 들어오는 노출이 없거나 받을 곳이 없는 칸', { color: 'gray' })]),
+    codeBlock(toMermaid(map), 'mermaid'),
+    { type: 'divider', divider: {} },
   ];
 
+  const allExposure = weeks.flatMap((x) => x.exposure);
   weeks.forEach((w, i) => {
     blocks.push(h2(`${i + 1}주 · ${md(w.start)} – ${md(w.end)}`));
+    blocks.push(para([
+      t('① 키워드  ', { bold: true }),
+      ...(w.keywords.length
+        ? w.keywords.flatMap((k, j) => [...(j ? [t('  ·  ', { color: 'gray' })] : []), t(k.text), t(k.count ? ` ${k.count.toLocaleString()}` : '', { color: 'gray' })])
+        : [t('카페 키워드가 적힌 칸 없음', { color: 'gray' })]),
+    ]));
 
-    blocks.push(h3('① 키워드 · 관심사'));
-    blocks.push(para(w.keywords.length
-      ? w.keywords.flatMap((k, j) => [...(j ? [t('  ·  ', { color: 'gray' })] : []), t(k.text), t(k.count ? ` ${k.count.toLocaleString()}` : '', { color: 'gray' })])
-      : [t('카페 키워드가 적힌 칸 없음', { color: 'gray' })]));
-
-    blocks.push(h3('② 노출 → 보낼 곳'));
     const shown = w.exposure.filter((r) => r.kind !== 'carousel' || r.link?.fit === 'good');
-    if (!shown.length) blocks.push(para([t('노출 콘텐츠 없음', { color: 'gray' })]));
-    for (const r of shown) {
-      const [fitText, color] = FIT_TEXT[r.link?.fit ?? 'none'];
-      const target = r.link?.targetId ? byId.get(r.link.targetId) : null;
-      blocks.push(bullet([
-        t(`${md(r.date)} ${KIND_LABEL[r.kind]}  `, { bold: true }),
-        mention(r.id),
-        t('  →  '),
-        ...(target ? [t(`${KIND_LABEL[target.kind]} ${md(target.date)} `), mention(target.id)] : []),
-        t(`  ${fitText}${r.link?.reason ? ` — ${r.link.reason}` : ''}`, { color }),
-      ]));
-    }
+    if (shown.length) {
+      blocks.push(table(['날짜', '② 노출', '→ ③ 보낼 곳', '연결'], shown.map((r) => {
+        const [fitText, color] = FIT_TEXT[r.link?.fit ?? 'none'];
+        const target = r.link?.targetId ? byId.get(r.link.targetId) : null;
+        return row([
+          cell(t(`${md(r.date)} ${KIND_LABEL[r.kind]}`)),
+          cell(mention(r.id)),
+          cell(target ? [t(`${KIND_LABEL[target.kind]} ${md(target.date)} `), mention(target.id)] : [t('-', { color: 'gray' })]),
+          cell(t(fitText, { color, bold: true }), r.link?.reason ? t(`\n${r.link.reason}`, { color: 'gray' }) : []),
+        ]);
+      })));
+    } else blocks.push(para([t('② 노출 콘텐츠 없음', { color: 'gray' })]));
 
-    blocks.push(h3('③ 블로그 · 웨비나 → ④'));
-    if (!w.mids.length) blocks.push(para([t('이번 주 블로그·웨비나 없음', { color: 'red' })]));
-    for (const m of w.mids) {
-      const feeders = weeks.flatMap((x) => x.exposure).filter((r) => r.link?.targetId === m.id).length;
-      blocks.push(bullet([
-        t(`${md(m.date)} ${KIND_LABEL[m.kind]}  `, { bold: true }),
-        mention(m.id),
-        t(`  →  ${FINAL[m.kind]}`),
-        t(`  (들어오는 노출 ${feeders}칸)`, { color: feeders ? 'gray' : 'red' }),
-      ]));
-    }
-    blocks.push({ type: 'divider', divider: {} });
+    if (w.mids.length) {
+      blocks.push(table(['날짜', '③ 블로그 · 웨비나', '들어오는 노출', '→ ④'], w.mids.map((m) => {
+        const feeders = allExposure.filter((r) => r.link?.targetId === m.id).length;
+        return row([
+          cell(t(`${md(m.date)} ${KIND_LABEL[m.kind]}`)),
+          cell(mention(m.id)),
+          cell(t(`${feeders}칸`, { color: feeders ? 'default' : 'red' })),
+          cell(t(FINAL[m.kind])),
+        ]);
+      })));
+    } else blocks.push(para([t('③ 이번 주 블로그·웨비나 없음', { color: 'red' })]));
   });
 
+  blocks.push({ type: 'divider', divider: {} });
   blocks.push(h2('점검'));
   if (!issues.length) blocks.push(para([t('걸린 것 없음')]));
   for (const s of issues) blocks.push(bullet([t(s)]));
